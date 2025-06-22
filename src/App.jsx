@@ -6,6 +6,7 @@ import Tasks from "./pages/Tasks";
 import Profile from "./pages/Profile";
 import BottomNav from "./components/BottomNav";
 import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
 export default function App() {
   return (
@@ -17,7 +18,7 @@ export default function App() {
         <Route path="/profile" element={<Profile />} />
       </Routes>
       <Analytics />
-
+      <SpeedInsights />
       <BottomNav />
     </div>
   );
