@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Wheel } from "react-custom-roulette";
 
 const data = [
@@ -16,20 +16,40 @@ export default function Spin() {
   const [mustSpin, setMustSpin] = useState(false);
   const [prizeNumber, setPrizeNumber] = useState(0);
   const [result, setResult] = useState(null);
+  const [balance, setBalance] = useState(0);
+  const [isVIP, setIsVIP] = useState(false);
 
-  const handleSpinClick = () => {
-    const isVIP = localStorage.getItem("isVIP") === "true";
-    const lastSpin = localStorage.getItem("lastSpin");
-    const now = new Date();
+  // Load balance and VIP status from localStorage
+  useEffect(() => {
+    const savedBalance = localStorage.getItem("spinCoins");
+    if (savedBalance) setBalance(parseInt(savedBalance));
 
-    if (!isVIP) {
-      if (lastSpin && now - new Date(lastSpin) < 4 * 60 * 60 * 1000) {
-        alert("⏳ Come back after 4 hours or buy VIP spins with Telegram Stars.");
-        return;
+    const vip = localStorage.getItem("vipTime");
+    if (vip) {
+      const hoursPassed = (new Date() - new Date(vip)) / (1000 * 60 * 60);
+      if (hoursPassed <= 24) {
+        setIsVIP(true);
+      } else {
+        localStorage.removeItem("vipTime");
       }
     }
+  }, []);
 
-    localStorage.setItem("lastSpin", now.toISOString());
+  // Save balance when it changes
+  useEffect(() => {
+    localStorage.setItem("spinCoins", balance);
+  }, [balance]);
+
+  const handleSpinClick = () => {
+    if (!isVIP) {
+      const lastSpin = localStorage.getItem("lastSpin");
+      const now = new Date();
+      if (lastSpin && now - new Date(lastSpin) < 4 * 60 * 60 * 1000) {
+        alert("⏳ Come back in 4 hours or become VIP with Telegram Stars.");
+        return;
+      }
+      localStorage.setItem("lastSpin", now.toISOString());
+    }
 
     const randomIndex = Math.floor(Math.random() * data.length);
     setPrizeNumber(randomIndex);
@@ -38,18 +58,36 @@ export default function Spin() {
   };
 
   const becomeVIP = () => {
-    const confirmVIP = window.confirm("Buy VIP with Telegram Stars? 10 Stars = 1 Day Access");
+    const confirmVIP = window.confirm("💎 Buy VIP with Telegram Stars?\n10 Stars = 1 Day Access");
     if (confirmVIP) {
-      localStorage.setItem("isVIP", "true");
-      alert("✅ You are now VIP! Enjoy unlimited spins for today.");
+      const now = new Date();
+      localStorage.setItem("vipTime", now.toISOString());
+      setIsVIP(true);
+      alert("✅ You're now VIP! Unlimited spins for 24 hours.");
     }
+  };
+
+  const handleReward = (rewardText) => {
+    const rewardAmount = parseInt(rewardText.replace(/\D/g, "")) || 0;
+    const newBalance = balance + rewardAmount;
+    setBalance(newBalance);
   };
 
   return (
     <div className="min-h-screen bg-[#0f0f0f] text-white flex flex-col items-center justify-center px-4 py-10">
-      <h1 className="text-3xl md:text-4xl font-bold text-yellow-400 mb-8 text-center">
+      <h1 className="text-3xl md:text-4xl font-bold text-yellow-400 mb-2 text-center">
         🎡 Spin & Earn
       </h1>
+
+      <div className="text-lg font-semibold mb-4 text-white">
+        🪙 Balance: <span className="text-yellow-400">{balance} Coins</span>
+      </div>
+
+      {isVIP && (
+        <div className="mb-3 text-sm px-4 py-1 bg-yellow-400 text-black rounded-full font-semibold animate-pulse">
+          💎 VIP Active – Unlimited Spins
+        </div>
+      )}
 
       <div className="w-full flex justify-center">
         <div className="w-[280px] sm:w-[320px] md:w-[360px] lg:w-[420px]" style={{ maxWidth: "90vw" }}>
@@ -61,7 +99,9 @@ export default function Spin() {
             textColors={["#ffffff"]}
             onStopSpinning={() => {
               setMustSpin(false);
-              setResult(data[prizeNumber].option);
+              const reward = data[prizeNumber].option;
+              setResult(reward);
+              handleReward(reward);
             }}
             radiusLineWidth={1}
             innerRadius={15}
@@ -83,12 +123,14 @@ export default function Spin() {
         {mustSpin ? "Spinning..." : "Spin Now"}
       </button>
 
-      <button
-        onClick={becomeVIP}
-        className="mt-3 px-6 py-2 bg-yellow-400 hover:bg-yellow-300 text-black rounded-full font-bold text-sm"
-      >
-        🚀 Become VIP with Telegram Stars
-      </button>
+      {!isVIP && (
+        <button
+          onClick={becomeVIP}
+          className="mt-3 px-6 py-2 bg-yellow-400 hover:bg-yellow-300 text-black rounded-full font-bold text-sm"
+        >
+          🚀 Become VIP with Telegram Stars
+        </button>
+      )}
 
       {result && (
         <div className="mt-6 text-2xl font-bold text-green-300 animate-pulse text-center">

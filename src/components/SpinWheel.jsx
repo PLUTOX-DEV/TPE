@@ -1,51 +1,137 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from "react";
+import { Wheel } from "react-custom-roulette";
 
-const prizes = [5, 10, 15, 20, 50, 100];
+const data = [
+  { option: "+0", style: { backgroundColor: "#7c3aed", textColor: "white" } },
+  { option: "+10", style: { backgroundColor: "#9333ea", textColor: "white" } },
+  { option: "+1000", style: { backgroundColor: "#a855f7", textColor: "white" } },
+  { option: "+5000", style: { backgroundColor: "#c084fc", textColor: "white" } },
+  { option: "ZERO", style: { backgroundColor: "#facc15", textColor: "#000" } },
+  { option: "+10000", style: { backgroundColor: "#f472b6", textColor: "white" } },
+  { option: "+15", style: { backgroundColor: "#34d399", textColor: "white" } },
+  { option: "+5", style: { backgroundColor: "#60a5fa", textColor: "white" } },
+];
 
-export default function SpinWheel() {
-  const [spinning, setSpinning] = useState(false);
-  const [reward, setReward] = useState(null);
-  const [angle, setAngle] = useState(0);
+export default function Spin() {
+  const [mustSpin, setMustSpin] = useState(false);
+  const [prizeNumber, setPrizeNumber] = useState(0);
+  const [result, setResult] = useState(null);
+  const [isVIP, setIsVIP] = useState(false);
 
-  const spin = () => {
-    if (spinning) return;
+  useEffect(() => {
+    checkVIPStatus();
+  }, []);
 
-    setSpinning(true);
-    const randomIndex = Math.floor(Math.random() * prizes.length);
-    const prize = prizes[randomIndex];
-    const newAngle = 360 * 5 + randomIndex * (360 / prizes.length);
+  const checkVIPStatus = () => {
+    const vipTime = localStorage.getItem("vipTime");
+    if (!vipTime) {
+      setIsVIP(false);
+      return;
+    }
 
-    setAngle(newAngle);
-    setTimeout(() => {
-      setReward(prize);
-      setSpinning(false);
-    }, 4000); // match CSS transition
+    const now = new Date();
+    const vipDate = new Date(vipTime);
+    const hoursPassed = (now - vipDate) / (1000 * 60 * 60);
+
+    if (hoursPassed > 24) {
+      localStorage.removeItem("vipTime");
+      setIsVIP(false);
+    } else {
+      setIsVIP(true);
+    }
+  };
+
+  const handleSpinClick = () => {
+    const lastSpin = localStorage.getItem("lastSpin");
+    const now = new Date();
+
+    if (!isVIP) {
+      if (lastSpin && now - new Date(lastSpin) < 4 * 60 * 60 * 1000) {
+        alert("⏳ Come back after 4 hours or become VIP with Telegram Stars.");
+        return;
+      }
+    }
+
+    localStorage.setItem("lastSpin", now.toISOString());
+    const randomIndex = Math.floor(Math.random() * data.length);
+    setPrizeNumber(randomIndex);
+    setMustSpin(true);
+    setResult(null);
+  };
+
+  const becomeVIP = () => {
+    const confirmVIP = confirm("💎 Buy VIP with Telegram Stars?\n10 Stars = 1 Day Access");
+    if (confirmVIP) {
+      const now = new Date();
+      localStorage.setItem("vipTime", now.toISOString());
+      setIsVIP(true);
+      alert("✅ You're now VIP! Unlimited spins for 24 hours.");
+    }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center mt-10">
-      <div className="relative w-40 h-40 border-[10px] border-yellow-500 rounded-full overflow-hidden">
+    <div className="min-h-screen bg-[#0f0f0f] text-white flex flex-col items-center justify-center px-4 py-10">
+      <h1 className="text-3xl md:text-4xl font-bold text-yellow-400 mb-4">🎡 Spin & Earn</h1>
+
+      {/* VIP Badge */}
+      {isVIP && (
+        <div className="mb-3 text-sm px-4 py-1 bg-yellow-400 text-black rounded-full font-semibold animate-pulse">
+          💎 VIP Active – Unlimited Spins
+        </div>
+      )}
+
+      {/* Wheel */}
+      <div className="w-full flex justify-center">
         <div
-          className="absolute inset-0 transition-transform duration-[4s] ease-out"
-          style={{
-            transform: `rotate(${angle}deg)`,
-            background:
-              'conic-gradient(#facc15 0% 16.6%, #eab308 16.6% 33.3%, #facc15 33.3% 50%, #eab308 50% 66.6%, #facc15 66.6% 83.3%, #eab308 83.3% 100%)'
-          }}
-        />
-        <div className="absolute top-[-10px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-[20px] border-transparent border-b-red-600 z-10"></div>
+          className="w-[280px] sm:w-[320px] md:w-[360px] lg:w-[420px]"
+          style={{ maxWidth: "90vw" }}
+        >
+          <Wheel
+            mustStartSpinning={mustSpin}
+            prizeNumber={prizeNumber}
+            data={data}
+            backgroundColors={["#7c3aed", "#9333ea"]}
+            textColors={["#ffffff"]}
+            onStopSpinning={() => {
+              setMustSpin(false);
+              setResult(data[prizeNumber].option);
+            }}
+            radiusLineWidth={1}
+            innerRadius={15}
+            outerBorderColor={"#facc15"}
+            outerBorderWidth={10}
+            radiusLineColor={"#000"}
+            fontSize={16}
+          />
+        </div>
       </div>
 
+      {/* Spin Button */}
       <button
-        onClick={spin}
-        className="mt-6 px-6 py-2 text-lg bg-yellow-400 text-black rounded-full shadow hover:scale-105 transition-transform"
-        disabled={spinning}
+        onClick={handleSpinClick}
+        disabled={mustSpin}
+        className={`mt-6 px-8 py-3 bg-purple-700 hover:bg-purple-800 rounded-full text-lg font-bold transition-all ${
+          mustSpin ? "opacity-50 cursor-not-allowed" : ""
+        }`}
       >
-        {spinning ? 'Spinning...' : 'Spin 🎯'}
+        {mustSpin ? "Spinning..." : "Spin Now"}
       </button>
 
-      {reward && !spinning && (
-        <p className="mt-4 text-lg font-semibold text-green-400">You won {reward} coins! 🥳</p>
+      {/* Become VIP Button */}
+      {!isVIP && (
+        <button
+          onClick={becomeVIP}
+          className="mt-3 px-6 py-2 bg-yellow-400 hover:bg-yellow-300 text-black rounded-full font-bold text-sm"
+        >
+          🚀 Become VIP with Telegram Stars
+        </button>
+      )}
+
+      {/* Result */}
+      {result && (
+        <div className="mt-6 text-2xl font-bold text-green-300 animate-pulse text-center">
+          🎉 You got: <span className="text-yellow-400">{result}</span>
+        </div>
       )}
     </div>
   );

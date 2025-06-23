@@ -5,7 +5,9 @@ import {
   faHome,
   faBullseye,
   faCheckCircle,
-  faUser
+  faUser,
+  faStore,
+  faGift, // ✅ New icon for Reward
 } from '@fortawesome/free-solid-svg-icons';
 
 export default function BottomNav() {
@@ -13,6 +15,8 @@ export default function BottomNav() {
     { to: '/', icon: faHome, label: 'Home' },
     { to: '/spin', icon: faBullseye, label: 'Spin' },
     { to: '/tasks', icon: faCheckCircle, label: 'Tasks' },
+    { to: '/store', icon: faStore, label: 'Store' },
+    { to: '/daily-reward', icon: faGift, label: 'Reward' }, // ✅ New Reward tab
     { to: '/profile', icon: faUser, label: 'Profile' },
   ];
 
@@ -23,7 +27,9 @@ export default function BottomNav() {
           key={item.to}
           to={item.to}
           className={({ isActive }) =>
-            `flex flex-col items-center text-xs ${isActive ? 'text-yellow-400' : 'text-white'}`
+            `flex flex-col items-center text-xs ${
+              isActive ? 'text-yellow-400' : 'text-white'
+            }`
           }
         >
           <FontAwesomeIcon icon={item.icon} size="lg" />
