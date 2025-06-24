@@ -7,6 +7,10 @@ import {
   faRobot,
   faLink,
   faRocket,
+  faUserFriends,
+  faCheckCircle,
+  faTimesCircle,
+  // faCopy,
 } from '@fortawesome/free-solid-svg-icons';
 
 export default function Profile() {
@@ -15,6 +19,8 @@ export default function Profile() {
   const [regenSpeed, setRegenSpeed] = useState(10000);
   const [hasTapBot, setHasTapBot] = useState(false);
   const [user, setUser] = useState(null);
+  const [refCount, setRefCount] = useState(0);
+  const [refEarnings, setRefEarnings] = useState(0);
 
   useEffect(() => {
     setCoins(parseInt(localStorage.getItem("tapCoins")) || 0);
@@ -25,8 +31,18 @@ export default function Profile() {
     const savedUser = JSON.parse(localStorage.getItem("telegramUser"));
     if (savedUser) {
       setUser(savedUser);
+
+      const referrals = JSON.parse(localStorage.getItem("referrals") || "{}");
+      const count = referrals[savedUser.username] || 0;
+      setRefCount(count);
+
+      const walletKey = `wallet_${savedUser.username}`;
+      const earnings = parseInt(localStorage.getItem(walletKey)) || 0;
+      setRefEarnings(earnings);
     }
   }, []);
+
+  const referralLink = `https://t.me/Djangotestrx_bot?start=${user?.username || 'your_ref_code'}`;
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[90vh] px-4 bg-gradient-to-b from-black via-gray-900 to-black text-white">
@@ -46,52 +62,58 @@ export default function Profile() {
           <p className="text-gray-400">@{user?.username || 'unknown'}</p>
         </div>
 
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <span className="text-gray-300">
-              <FontAwesomeIcon icon={faCoins} className="text-yellow-400 mr-2" />
-              Coin Balance:
-            </span>
-            <span className="text-green-400 font-bold">{coins} 🪙</span>
-          </div>
+        <div className="space-y-4 text-sm">
+          <InfoRow icon={faCoins} label="Coin Balance:" value={`${coins} 🪙`} color="text-green-400" />
+          <InfoRow icon={faRocket} label="Tap Multiplier:" value={`x${multiplier}`} color="text-purple-300" />
+          <InfoRow icon={faBolt} label="Regen Speed:" value={`${regenSpeed / 1000}s`} color="text-blue-300" />
+          <InfoRow
+            icon={faRobot}
+            label="Tap Bot:"
+            value={
+              <span className={`flex items-center gap-1 font-bold ${hasTapBot ? 'text-green-400' : 'text-red-400'}`}>
+                <FontAwesomeIcon icon={hasTapBot ? faCheckCircle : faTimesCircle} />
+                {hasTapBot ? "Owned" : "Not Owned"}
+              </span>
+            }
+          />
+          <InfoRow icon={faUserFriends} label="Referred Users:" value={refCount} color="text-yellow-300" />
+          <InfoRow icon={faCoins} label="Referral Earnings:" value={`${refEarnings} 🪙`} color="text-yellow-300" />
+        </div>
 
-          <div className="flex justify-between items-center">
-            <span className="text-gray-300">
-              <FontAwesomeIcon icon={faRocket} className="text-purple-400 mr-2" />
-              Tap Multiplier:
-            </span>
-            <span className="text-purple-300 font-bold">x{multiplier}</span>
-          </div>
+        <div className="mt-6">
+          <p className="text-gray-300 mb-1 flex items-center">
+            <FontAwesomeIcon icon={faLink} className="text-yellow-400 mr-2" />
+            Referral Link:
+          </p>
+          <code className="bg-gray-800 px-2 py-1 rounded text-sm block text-white break-all">
+            {referralLink}
+          </code>
 
-          <div className="flex justify-between items-center">
-            <span className="text-gray-300">
-              <FontAwesomeIcon icon={faBolt} className="text-blue-400 mr-2" />
-              Regen Speed:
-            </span>
-            <span className="text-blue-300 font-bold">{regenSpeed / 1000}s</span>
-          </div>
-
-          <div className="flex justify-between items-center">
-            <span className="text-gray-300">
-              <FontAwesomeIcon icon={faRobot} className="text-green-300 mr-2" />
-              Tap Bot:
-            </span>
-            <span className={hasTapBot ? "text-green-400 font-bold" : "text-red-400 font-bold"}>
-              {hasTapBot ? "✅ Owned" : "❌ Not Owned"}
-            </span>
-          </div>
-
-          <div className="mt-6">
-            <p className="text-gray-300 mb-1 flex items-center">
-              <FontAwesomeIcon icon={faLink} className="text-yellow-400 mr-2" />
-              Referral Link:
-            </p>
-            <code className="bg-gray-800 px-2 py-1 rounded text-sm block text-white break-all">
-              https://t.me/yourapp?start={user?.username || 'your_ref_code'}
-            </code>
-          </div>
+          {/* Optional Copy Button
+          <button
+            className="mt-2 text-xs text-blue-400 hover:underline"
+            onClick={() => {
+              navigator.clipboard.writeText(referralLink);
+              alert("Referral link copied!");
+            }}
+          >
+            <FontAwesomeIcon icon={faCopy} className="mr-1" />
+            Copy
+          </button> */}
         </div>
       </div>
+    </div>
+  );
+}
+
+function InfoRow({ icon, label, value, color = "text-white" }) {
+  return (
+    <div className="flex justify-between items-center">
+      <span className="text-gray-300 flex items-center gap-2">
+        <FontAwesomeIcon icon={icon} className="text-yellow-400" />
+        {label}
+      </span>
+      <span className={`font-bold ${color}`}>{value}</span>
     </div>
   );
 }

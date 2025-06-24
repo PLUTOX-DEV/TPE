@@ -28,6 +28,28 @@ export default function App() {
         };
         localStorage.setItem("telegramUser", JSON.stringify(userInfo));
         console.log("Telegram User:", userInfo);
+
+        // ✅ Referral tracking + reward
+        const startParam = tg.initDataUnsafe?.start_param;
+        const hasVisited = localStorage.getItem("hasVisited");
+
+        if (startParam && !hasVisited && startParam !== user.username) {
+          localStorage.setItem("referrer", startParam);
+          localStorage.setItem("hasVisited", "true");
+
+          // Count referral
+          const referrals = JSON.parse(localStorage.getItem("referrals") || "{}");
+          referrals[startParam] = (referrals[startParam] || 0) + 1;
+          localStorage.setItem("referrals", JSON.stringify(referrals));
+
+          // Reward referrer (store under wallet_username)
+          const walletKey = `wallet_${startParam}`;
+          const currentReward = parseInt(localStorage.getItem(walletKey)) || 0;
+          const newReward = currentReward + 20; // Reward amount
+          localStorage.setItem(walletKey, newReward);
+
+          console.log(`✅ ${startParam} referred a user and earned 20 coins.`);
+        }
       }
     }
   }, []);
@@ -42,6 +64,7 @@ export default function App() {
         <Route path="/store" element={<Store />} />
         <Route path="/daily-reward" element={<DailyReward />} />
       </Routes>
+
       <Analytics />
       <SpeedInsights />
       <BottomNav />

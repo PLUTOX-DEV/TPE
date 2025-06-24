@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUserFriends, faCheckCircle } from "@fortawesome/free-solid-svg-icons";
+import { faUserFriends, faCheckCircle, faCheck } from "@fortawesome/free-solid-svg-icons";
 import { faTwitter, faTelegram } from "@fortawesome/free-brands-svg-icons";
+
 
 const TASKS = [
   {
@@ -82,12 +83,24 @@ export default function Tasks() {
 
             {/* Buttons */}
             <div className="flex gap-3">
-              <button
-                onClick={() => handleVisit(task.id, task.link)}
-                className="bg-blue-600 hover:bg-blue-700 px-4 py-2 text-sm rounded-lg font-bold"
-              >
-                {visitedTasks[task.id] ? "✅ Visited" : "Visit"}
-              </button>
+           <button
+  onClick={() => handleVisit(task.id, task.link)}
+  disabled={visitedTasks[task.id]}
+  className={`bg-blue-600 hover:bg-blue-700 px-4 py-2 text-sm rounded-lg font-bold flex items-center gap-2 ${
+    visitedTasks[task.id] ? "opacity-50 cursor-not-allowed" : ""
+  }`}
+>
+  {visitedTasks[task.id] ? (
+    <>
+      <FontAwesomeIcon icon={faCheck} />
+      Visited
+    </>
+  ) : (
+    "Visit"
+  )}
+</button>
+
+
 
               <button
                 onClick={() => handleClaim(task)}
