@@ -42,7 +42,7 @@ export default function Profile() {
     }
   }, []);
 
-  const referralLink = `https://t.me/Djangotestrx_bot?start=${user?.username || 'your_ref_code'}`;
+  const referralLink = `https://t.me/Djangotestxr_bot?start=${user?.username || 'your_ref_code'}`;
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[90vh] px-4 bg-gradient-to-b from-black via-gray-900 to-black text-white">
