@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Wheel } from "react-custom-roulette";
 import toast from "react-hot-toast";
-import { TonConnectButton } from "@tonconnect/ui-react";
+import { useTonConnectUI, TonConnectButton } from "@tonconnect/ui-react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCoins,
@@ -9,6 +9,9 @@ import {
   faGem,
   faCheckCircle,
   faCircleXmark,
+  faWallet,
+  faClock,
+  faSpinner,
 } from "@fortawesome/free-solid-svg-icons";
 
 const data = [
@@ -29,6 +32,7 @@ export default function Spin() {
   const [balance, setBalance] = useState(0);
   const [isVIP, setIsVIP] = useState(false);
   const [showPremium, setShowPremium] = useState(false);
+  const [tonConnectUI] = useTonConnectUI();
 
   useEffect(() => {
     const savedTapBalance = parseInt(localStorage.getItem("tapCoins")) || 0;
@@ -54,7 +58,12 @@ export default function Spin() {
       const lastSpin = localStorage.getItem("lastSpin");
       const now = new Date();
       if (lastSpin && now - new Date(lastSpin) < 4 * 60 * 60 * 1000) {
-        toast.error("⏳ Wait 4 hrs or get Premium with TON.");
+        toast.error(
+          <>
+            <FontAwesomeIcon icon={faClock} className="mr-2" />
+            Wait 4 hrs or get Premium with TON.
+          </>
+        );
         return;
       }
       localStorage.setItem("lastSpin", now.toISOString());
@@ -70,23 +79,51 @@ export default function Spin() {
     const rewardAmount = parseInt(rewardText.replace(/\D/g, "")) || 0;
     const newBalance = balance + rewardAmount;
     setBalance(newBalance);
-    toast.success(`🎉 +${rewardAmount} Coins added to your balance!`);
+    toast.success(
+      <>
+        <FontAwesomeIcon icon={faCoins} className="mr-2" />
+        +{rewardAmount} Coins added!
+      </>
+    );
   };
 
-  const simulateTONPayment = () => {
-    const now = new Date();
-    localStorage.setItem("vipTime", now.toISOString());
-    setIsVIP(true);
-    setShowPremium(false);
-    toast.success("✅ VIP activated (simulated TON payment)");
+  // ✅ REAL TON Payment Function
+  const handleTONPayment = async () => {
+    try {
+      const recipientAddress = "EQCI5...YOUR_TON_ADDRESS_HERE"; // Replace with your TON wallet
+      const nanoTON = "100000000"; // 0.1 TON = 100M nanoTON
+
+      await tonConnectUI.sendTransaction({
+        validUntil: Math.floor(Date.now() / 1000) + 360,
+        messages: [
+          {
+            address: recipientAddress,
+            amount: nanoTON,
+          },
+        ],
+      });
+
+      const now = new Date();
+      localStorage.setItem("vipTime", now.toISOString());
+      setIsVIP(true);
+      setBalance((prev) => prev + 1000); // Bonus coins
+      setShowPremium(false);
+      toast.success(
+        <>
+          <FontAwesomeIcon icon={faGem} className="mr-2" />
+          VIP activated – 1000 bonus coins!
+        </>
+      );
+    } catch (err) {
+      console.error(err);
+      toast.error("❌ TON payment failed or cancelled.");
+    }
   };
 
   return (
     <div className="min-h-screen bg-[#0f0f0f] text-white flex items-center justify-center px-4">
-      <div className="w-full max-w-md flex flex-col items-center justify-center py-10">
-        <h1 className="text-3xl font-bold text-yellow-400 mb-4 text-center">
-          🎡 Spin & Earn
-        </h1>
+      <div className="w-full max-w-md flex flex-col items-center py-10 text-center">
+        <h1 className="text-3xl font-bold text-yellow-400 mb-4">🎡 Spin & Earn</h1>
 
         <div className="text-lg mb-4">
           <FontAwesomeIcon icon={faCoins} className="text-yellow-400 mr-2" />
@@ -100,44 +137,52 @@ export default function Spin() {
           </div>
         )}
 
-        <div className="w-full flex justify-center mb-6">
-          <div className="w-[300px] max-w-[90vw]">
-            <Wheel
-              mustStartSpinning={mustSpin}
-              prizeNumber={prizeNumber}
-              data={data}
-              backgroundColors={["#7c3aed", "#9333ea"]}
-              textColors={["#ffffff"]}
-              onStopSpinning={() => {
-                setMustSpin(false);
-                const reward = data[prizeNumber].option;
-                setResult(reward);
-                handleReward(reward);
-              }}
-              radiusLineWidth={1}
-              innerRadius={15}
-              outerBorderColor={"#facc15"}
-              outerBorderWidth={10}
-              radiusLineColor={"#000"}
-              fontSize={16}
-            />
-          </div>
+        <div className="w-[300px] sm:w-[320px] max-w-[90vw] mb-6">
+          <Wheel
+            mustStartSpinning={mustSpin}
+            prizeNumber={prizeNumber}
+            data={data}
+            backgroundColors={["#7c3aed", "#9333ea"]}
+            textColors={["#ffffff"]}
+            onStopSpinning={() => {
+              setMustSpin(false);
+              const reward = data[prizeNumber].option;
+              setResult(reward);
+              handleReward(reward);
+            }}
+            radiusLineWidth={1}
+            innerRadius={15}
+            outerBorderColor={"#facc15"}
+            outerBorderWidth={10}
+            radiusLineColor={"#000"}
+            fontSize={16}
+          />
         </div>
 
         <button
           onClick={handleSpinClick}
           disabled={mustSpin}
-          className={`mb-4 px-8 py-3 bg-purple-700 hover:bg-purple-800 rounded-full text-lg font-bold ${
+          className={`mb-4 px-8 py-3 bg-purple-700 hover:bg-purple-800 rounded-full text-lg font-bold flex items-center justify-center ${
             mustSpin ? "opacity-50 cursor-not-allowed" : ""
           }`}
         >
-          {mustSpin ? "Spinning..." : "Spin Now"}
+          {mustSpin ? (
+            <>
+              <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
+              Spinning...
+            </>
+          ) : (
+            <>
+              <FontAwesomeIcon icon={faCoins} className="mr-2" />
+              Spin Now
+            </>
+          )}
         </button>
 
         {!isVIP && (
           <button
             onClick={() => setShowPremium(true)}
-            className="mb-2 px-6 py-2 bg-yellow-400 text-black rounded-full font-bold"
+            className="mb-2 px-6 py-2 bg-yellow-400 text-black rounded-full font-bold flex items-center justify-center"
           >
             <FontAwesomeIcon icon={faStar} className="mr-2" />
             Get Premium with TON
@@ -145,13 +190,14 @@ export default function Spin() {
         )}
 
         {result && (
-          <div className="mt-4 text-2xl font-bold text-green-300 animate-pulse text-center">
+          <div className="mt-4 text-2xl font-bold text-green-300 animate-pulse">
             <FontAwesomeIcon icon={faCheckCircle} className="mr-2" />
             You got: <span className="text-yellow-400">{result}</span>
           </div>
         )}
       </div>
 
+      {/* Modal */}
       {showPremium && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-[#111] p-6 rounded-xl text-white max-w-sm w-full text-center">
@@ -160,25 +206,35 @@ export default function Spin() {
               Premium Benefits
             </h2>
             <ul className="text-sm space-y-2 mb-4 text-left">
-              <li><FontAwesomeIcon icon={faCheckCircle} className="mr-2 text-green-400" /> Unlimited Spins for 24 hrs</li>
-              <li><FontAwesomeIcon icon={faCheckCircle} className="mr-2 text-green-400" /> +1000 Bonus Coins</li>
-              <li><FontAwesomeIcon icon={faCheckCircle} className="mr-2 text-green-400" /> Future VIP tasks access</li>
+              <li>
+                <FontAwesomeIcon icon={faCheckCircle} className="mr-2 text-green-400" />
+                Unlimited Spins for 24 hrs
+              </li>
+              <li>
+                <FontAwesomeIcon icon={faCheckCircle} className="mr-2 text-green-400" />
+                +1000 Bonus Coins
+              </li>
+              <li>
+                <FontAwesomeIcon icon={faCheckCircle} className="mr-2 text-green-400" />
+                Future VIP access
+              </li>
             </ul>
 
             <TonConnectButton className="mb-4" />
 
             <button
-              onClick={simulateTONPayment}
-              className="w-full bg-green-600 hover:bg-green-700 py-2 rounded-full font-bold"
+              onClick={handleTONPayment}
+              className="w-full bg-green-600 hover:bg-green-700 py-2 rounded-full font-bold flex items-center justify-center"
             >
-              ✅ Simulate Pay 0.1 TON
+              <FontAwesomeIcon icon={faWallet} className="mr-2" />
+              Pay 0.1 TON
             </button>
 
             <button
               onClick={() => setShowPremium(false)}
-              className="mt-3 text-center text-gray-400 hover:text-white text-sm flex justify-center items-center w-full"
+              className="mt-3 text-gray-400 hover:text-white text-sm flex justify-center items-center w-full"
             >
-              <FontAwesomeIcon icon={faCircleXmark} className="mr-1" />
+              <FontAwesomeIcon icon={faCircleXmark} className="mr-2" />
               Cancel
             </button>
           </div>
