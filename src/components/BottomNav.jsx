@@ -7,7 +7,8 @@ import {
   faCheckCircle,
   faUser,
   faStore,
-  faGift, // ✅ New icon for Reward
+  faGift,
+  faTrophy, // 🏆 Icon for Leaderboard
 } from '@fortawesome/free-solid-svg-icons';
 
 export default function BottomNav() {
@@ -16,7 +17,8 @@ export default function BottomNav() {
     { to: '/spin', icon: faBullseye, label: 'Spin' },
     { to: '/tasks', icon: faCheckCircle, label: 'Tasks' },
     { to: '/store', icon: faStore, label: 'Store' },
-    { to: '/daily-reward', icon: faGift, label: 'Reward' }, // ✅ New Reward tab
+    { to: '/daily-reward', icon: faGift, label: 'Reward' },
+    { to: '/leaderboard', icon: faTrophy, label: 'Top' }, // 🏆 New Leaderboard tab
     { to: '/profile', icon: faUser, label: 'Profile' },
   ];
 

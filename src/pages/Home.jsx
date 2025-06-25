@@ -1,10 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import coinImg from '../assets/coin.png';
+import { StaminaContext } from '../context/StaminaContext';
 
 export default function Home() {
+  const { stamina, setStamina, maxStamina } = useContext(StaminaContext);
+
   const [coins, setCoins] = useState(0);
   const [tapping, setTapping] = useState(false);
-  const [stamina, setStamina] = useState(100);
   const [regenSpeed, setRegenSpeed] = useState(10000);
   const [multiplier, setMultiplier] = useState(1);
   const [hasTapBot, setHasTapBot] = useState(false);
@@ -21,40 +23,30 @@ export default function Home() {
     setHasTapBot(bot);
   }, []);
 
-  // 🟢 Regenerate stamina
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setStamina(prev => (prev < 100 ? prev + 1 : 100));
-    }, regenSpeed);
-    return () => clearInterval(interval);
-  }, [regenSpeed]);
-
-  // 🤖 Auto Tap Bot
   useEffect(() => {
     if (!hasTapBot) return;
     const botInterval = setInterval(() => {
       if (stamina > 0) handleTap(true);
-    }, 3000); // every 3 seconds
+    }, 3000);
     return () => clearInterval(botInterval);
   }, [stamina, hasTapBot]);
 
   const handleTap = (isBot = false) => {
     if (tapping || stamina <= 0) return;
 
-    if (!isBot) {
-      setTapping(true);
-    }
+    if (!isBot) setTapping(true);
 
     setTimeout(() => {
       const earned = multiplier;
       const newTotal = coins + earned;
       setCoins(newTotal);
-      setStamina(prev => Math.max(0, prev - 1));
+      setStamina(prev => {
+        const updated = Math.max(0, prev - 1);
+        localStorage.setItem("stamina", updated);
+        return updated;
+      });
       localStorage.setItem('tapCoins', newTotal);
-
-      if (!isBot) {
-        setTapping(false);
-      }
+      if (!isBot) setTapping(false);
     }, 200);
   };
 
@@ -68,12 +60,12 @@ export default function Home() {
         </p>
 
         <p className="text-sm mt-1 text-green-400">Multiplier: ×{multiplier}</p>
-        <p className="text-sm text-blue-400 mb-2">Stamina: {stamina}/100</p>
+        <p className="text-sm text-blue-400 mb-2">Stamina: {stamina}/{maxStamina}</p>
 
         <div className="w-full bg-gray-700 rounded-full h-3 mb-6 overflow-hidden">
           <div
             className="bg-yellow-400 h-full"
-            style={{ width: `${stamina}%`, transition: 'width 0.3s' }}
+            style={{ width: `${(stamina / maxStamina) * 100}%`, transition: 'width 0.3s' }}
           ></div>
         </div>
 

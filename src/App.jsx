@@ -6,6 +6,7 @@ import Tasks from "./pages/Tasks";
 import Profile from "./pages/Profile";
 import Store from "./pages/Store";
 import DailyReward from "./pages/DailyReward";
+import Leaderboard from "./pages/Leaderboard";
 
 import BottomNav from "./components/BottomNav";
 import { Analytics } from "@vercel/analytics/react";
@@ -37,19 +38,39 @@ export default function App() {
           localStorage.setItem("referrer", startParam);
           localStorage.setItem("hasVisited", "true");
 
-          // Count referral
           const referrals = JSON.parse(localStorage.getItem("referrals") || "{}");
           referrals[startParam] = (referrals[startParam] || 0) + 1;
           localStorage.setItem("referrals", JSON.stringify(referrals));
 
-          // Reward referrer (store under wallet_username)
           const walletKey = `wallet_${startParam}`;
           const currentReward = parseInt(localStorage.getItem(walletKey)) || 0;
-          const newReward = currentReward + 20; // Reward amount
+          const newReward = currentReward + 20;
           localStorage.setItem(walletKey, newReward);
 
           console.log(`✅ ${startParam} referred a user and earned 20 coins.`);
         }
+
+        // ✅ Leaderboard tracking
+        const leaderboard = JSON.parse(localStorage.getItem("leaderboard")) || [];
+        const coins = parseInt(localStorage.getItem("tapCoins")) || 0;
+        const refCount = JSON.parse(localStorage.getItem("referrals") || "{}")[user.username] || 0;
+
+        const existing = leaderboard.find(u => u.username === user.username);
+
+        if (!existing) {
+          leaderboard.push({
+            username: user.username,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            coins,
+            referrals: refCount,
+          });
+        } else {
+          existing.coins = coins;
+          existing.referrals = refCount;
+        }
+
+        localStorage.setItem("leaderboard", JSON.stringify(leaderboard));
       }
     }
   }, []);
@@ -63,6 +84,7 @@ export default function App() {
         <Route path="/profile" element={<Profile />} />
         <Route path="/store" element={<Store />} />
         <Route path="/daily-reward" element={<DailyReward />} />
+        <Route path="/leaderboard" element={<Leaderboard />} />
       </Routes>
 
       <Analytics />
