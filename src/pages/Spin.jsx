@@ -90,7 +90,7 @@ export default function Spin() {
   // ✅ REAL TON Payment Function
   const handleTONPayment = async () => {
     try {
-      const recipientAddress = "EQCI5...YOUR_TON_ADDRESS_HERE"; // Replace with your TON wallet
+      const recipientAddress = "UQAha8bIACCx0y6PKFDrId_375lnlQVMMGotdZ81N812axgU"; // Replace with your TON wallet
       const nanoTON = "100000000"; // 0.1 TON = 100M nanoTON
 
       await tonConnectUI.sendTransaction({
