@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react';
-import coinImg from '../assets/coin.png';
+import coinImg from '../assets/coin.jpg';
 import { StaminaContext } from '../context/StaminaContext';
+import toast from 'react-hot-toast';
 
 export default function Home() {
   const { stamina, setStamina, maxStamina } = useContext(StaminaContext);
@@ -23,6 +24,8 @@ export default function Home() {
     setHasTapBot(bot);
   }, []);
 
+  // 🟢 Auto Regeneration (already handled globally via context)
+  // 🤖 Auto Tap Bot
   useEffect(() => {
     if (!hasTapBot) return;
     const botInterval = setInterval(() => {
@@ -32,7 +35,10 @@ export default function Home() {
   }, [stamina, hasTapBot]);
 
   const handleTap = (isBot = false) => {
-    if (tapping || stamina <= 0) return;
+    if (tapping || stamina <= 0) {
+      if (!isBot) toast.error("You're out of stamina!");
+      return;
+    }
 
     if (!isBot) setTapping(true);
 
@@ -46,6 +52,8 @@ export default function Home() {
         return updated;
       });
       localStorage.setItem('tapCoins', newTotal);
+
+      if (!isBot) toast.success(`+${earned} 🪙`);
       if (!isBot) setTapping(false);
     }, 200);
   };

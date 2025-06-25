@@ -15,6 +15,8 @@
     "@fortawesome/free-solid-svg-icons": "^6.7.2",
     "@fortawesome/react-fontawesome": "^0.2.2",
     "@tailwindcss/vite": "^4.1.10",
+    "@tonconnect/sdk": "^3.2.0",
+    "@tonconnect/ui-react": "^2.2.0",
     "@twa-dev/sdk": "^8.0.2",
     "@vercel/analytics": "^1.5.0",
     "@vercel/speed-insights": "^1.2.0",
@@ -26,6 +28,7 @@
     "react-confetti": "^6.4.0",
     "react-custom-roulette": "^1.4.1",
     "react-dom": "^18.2.0",
+    "react-hot-toast": "^2.5.2",
     "react-icons": "^5.5.0",
     "react-router-dom": "^7.6.2",
     "tailwindcss": "^4.1.10"
