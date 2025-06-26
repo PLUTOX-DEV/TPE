@@ -1,43 +1,33 @@
 const BASE_URL = 'http://localhost:5000/api/users'; // or your production URL
 
 // Get user by telegramId
-export async function getUser(telegramId) {
-  try {
-    const response = await fetch(`${BASE_URL}/${telegramId}`);
-    if (!response.ok) throw new Error('Failed to fetch user');
-    return await response.json();
-  } catch (err) {
-    console.error('Failed to get user:', err);
-    throw err;
-  }
-}
 
-// Update user data
-export async function updateUser(telegramId, updates) {
-  try {
-    const response = await fetch(`${BASE_URL}/update`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ telegramId, ...updates }),
-    });
+export const getUser = async (telegramId) => {
+  const res = await fetch(`${BASE_URL}/${telegramId}`);
+  if (!res.ok) throw new Error("Failed to get user");
+  return await res.json();
+};
 
-    const data = await response.json();
-    return data;
-  } catch (err) {
-    console.error("Failed to update user:", err);
-    throw err;
-  }
-}
+export const updateUser = async (telegramId, updates) => {
+  const res = await fetch(`${BASE_URL}/update`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ telegramId, ...updates }),
+  });
+  if (!res.ok) throw new Error("Failed to update user");
+  return await res.json();
+};
+
 
 // Login user
 export async function loginUser(userData) {
   try {
-    const res = await fetch(`${BASE_URL}/login`, {
+    const { telegramId, username, fullName, referrer = "" } = userData;
+
+    const res = await fetch(`${BASE_URL}/login?ref=${referrer}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(userData),
+      body: JSON.stringify({ telegramId, username, fullName }),
     });
 
     if (!res.ok) {
