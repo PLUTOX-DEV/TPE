@@ -27,7 +27,6 @@ const data = [
   { option: "+5", style: { backgroundColor: "#60a5fa", textColor: "white" } },
 ];
 
-// Map packages to spins per day
 const PACKAGE_SPINS = {
   free: 1,
   bronze: 3,
@@ -40,29 +39,20 @@ export default function Spin() {
   const [prizeNumber, setPrizeNumber] = useState(0);
   const [result, setResult] = useState(null);
   const [balance, setBalance] = useState(0);
-
-  // package: 'free' | 'bronze' | 'silver' | 'gold'
   const [packageType, setPackageType] = useState("free");
-
-  // spins used today
   const [spinsUsed, setSpinsUsed] = useState(0);
-
   const [showPremium, setShowPremium] = useState(false);
   const [tonConnectUI] = useTonConnectUI();
 
-  // Helper: get today's date string (yyyy-mm-dd)
   const todayStr = () => new Date().toISOString().split("T")[0];
 
   useEffect(() => {
     const savedTapBalance = parseInt(localStorage.getItem("tapCoins")) || 0;
     setBalance(savedTapBalance);
-
-    // Load package info and spins used
     const savedPackage = localStorage.getItem("packageType") || "free";
     const savedSpinsUsed = parseInt(localStorage.getItem("spinsUsed")) || 0;
     const savedSpinsDate = localStorage.getItem("spinsDate");
 
-    // Reset spins if date changed
     if (savedSpinsDate !== todayStr()) {
       setSpinsUsed(0);
       localStorage.setItem("spinsUsed", "0");
@@ -78,7 +68,6 @@ export default function Spin() {
     localStorage.setItem("tapCoins", balance);
   }, [balance]);
 
-  // Call this when a spin is used
   const incrementSpinUsed = () => {
     const newCount = spinsUsed + 1;
     setSpinsUsed(newCount);
@@ -87,24 +76,16 @@ export default function Spin() {
   };
 
   const handleSpinClick = () => {
-    // Check spins left
     const maxSpins = PACKAGE_SPINS[packageType] || 1;
     if (spinsUsed >= maxSpins) {
-      if (packageType === "free") {
-        toast.error(
-          <>
-            <FontAwesomeIcon icon={faClock} className="mr-2" />
-            Free users get 1 spin per day. Get Premium for more spins.
-          </>
-        );
-      } else {
-        toast.error(
-          <>
-            <FontAwesomeIcon icon={faClock} className="mr-2" />
-            You've used all your {maxSpins} spins today.
-          </>
-        );
-      }
+      toast.error(
+        <>
+          <FontAwesomeIcon icon={faClock} className="mr-2" />
+          {packageType === "free"
+            ? "Free users get 1 spin per day. Get Premium for more spins."
+            : `You've used all your ${maxSpins} spins today.`}
+        </>
+      );
       return;
     }
 
@@ -112,8 +93,6 @@ export default function Spin() {
     setPrizeNumber(randomIndex);
     setMustSpin(true);
     setResult(null);
-
-    // Count spin usage
     incrementSpinUsed();
   };
 
@@ -129,30 +108,22 @@ export default function Spin() {
     );
   };
 
-  // Payment packages config
   const PACKAGES = {
     bronze: { label: "Bronze", priceTON: "0.02", spins: 3 },
     silver: { label: "Silver", priceTON: "0.035", spins: 5 },
     gold: { label: "Gold", priceTON: "0.05", spins: 7 },
   };
 
-  // Handle purchase via TON payment
   const handleBuyPackage = async (pack) => {
     try {
-      const recipientAddress = "UQABNds6e6LqY3ogKL7MbwHozMPIQBy347g3_0Q-t9WPdZXo"; // Replace with your TON wallet
+      const recipientAddress = "UQAha8bIACCx0y6PKFDrId_375lnlQVMMGotdZ81N812axgU";
       const nanoTON = (parseFloat(PACKAGES[pack].priceTON) * 1e9).toString();
 
       await tonConnectUI.sendTransaction({
         validUntil: Math.floor(Date.now() / 1000) + 360,
-        messages: [
-          {
-            address: recipientAddress,
-            amount: nanoTON,
-          },
-        ],
+        messages: [{ address: recipientAddress, amount: nanoTON }],
       });
 
-      // On success, update package & reset spins used
       setPackageType(pack);
       setSpinsUsed(0);
       localStorage.setItem("packageType", pack);
@@ -175,6 +146,12 @@ export default function Spin() {
   return (
     <div className="min-h-screen bg-[#0f0f0f] text-white flex items-center justify-center px-4">
       <div className="w-full max-w-md flex flex-col items-center py-10 text-center">
+        
+        {/* ✅ Wallet Connect Button */}
+        <div className="w-full flex justify-end mb-4">
+          <TonConnectButton />
+        </div>
+
         <h1 className="text-3xl font-bold text-yellow-400 mb-4">🎡 Spin & Earn</h1>
 
         <div className="text-lg mb-4">
@@ -184,8 +161,7 @@ export default function Spin() {
 
         <div className="mb-2">
           Package:{" "}
-          <span className="text-yellow-400 font-semibold capitalize">{packageType}</span> |{" "}
-          Spins used today: {spinsUsed} / {PACKAGE_SPINS[packageType] || 1}
+          <span className="text-yellow-400 font-semibold capitalize">{packageType}</span> | Spins used today: {spinsUsed} / {PACKAGE_SPINS[packageType] || 1}
         </div>
 
         <div className="w-[300px] sm:w-[320px] max-w-[90vw] mb-6">
@@ -248,7 +224,7 @@ export default function Spin() {
         )}
       </div>
 
-      {/* Modal */}
+      {/* Premium Modal */}
       {showPremium && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-[#111] p-6 rounded-xl text-white max-w-sm w-full text-center">
@@ -281,7 +257,6 @@ export default function Spin() {
                         {pack.priceTON} TON
                       </span>
                     </div>
-
                     <button
                       onClick={() => handleBuyPackage(key)}
                       className="bg-green-600 hover:bg-green-700 px-4 py-1 rounded-full font-bold text-sm flex items-center"
