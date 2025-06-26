@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useState } from 'react';
 import coinImg from '../assets/coin.jpg';
 import { StaminaContext } from '../context/StaminaContext';
 import toast from 'react-hot-toast';
+import { getUser, updateUser } from '../api/userApi.jsx';
 
 export default function Home() {
   const { stamina, setStamina, maxStamina } = useContext(StaminaContext);
@@ -11,20 +12,41 @@ export default function Home() {
   const [regenSpeed, setRegenSpeed] = useState(10000);
   const [multiplier, setMultiplier] = useState(1);
   const [hasTapBot, setHasTapBot] = useState(false);
+  const [isVIP, setIsVIP] = useState(false);
 
+  const telegramId = localStorage.getItem('telegramId'); // Must be set after Telegram login
+
+  // 🔁 Load user from backend
   useEffect(() => {
-    const saved = parseInt(localStorage.getItem('tapCoins')) || 0;
-    const regen = parseInt(localStorage.getItem('staminaRegenSpeed')) || 10000;
-    const mult = parseInt(localStorage.getItem('tapMultiplier')) || 1;
-    const bot = localStorage.getItem('hasTapBot') === 'true';
+    const init = async () => {
+      if (!telegramId) return;
 
-    setCoins(saved);
-    setRegenSpeed(regen);
-    setMultiplier(mult);
-    setHasTapBot(bot);
-  }, []);
+      try {
+        const user = await getUser(telegramId);
+        setCoins(user.balance || 0);
+        setIsVIP(user.isVIP || false);
 
-  // 🟢 Auto Regeneration (already handled globally via context)
+        // Save to localStorage for offline use
+        localStorage.setItem('tapCoins', user.balance);
+        localStorage.setItem('isVIP', user.isVIP);
+      } catch (err) {
+        console.error('Failed to load user', err);
+      }
+    };
+
+    const localCoins = parseInt(localStorage.getItem('tapCoins')) || 0;
+    const localRegen = parseInt(localStorage.getItem('staminaRegenSpeed')) || 10000;
+    const localMult = parseInt(localStorage.getItem('tapMultiplier')) || 1;
+    const localBot = localStorage.getItem('hasTapBot') === 'true';
+
+    setCoins(localCoins);
+    setRegenSpeed(localRegen);
+    setMultiplier(localMult);
+    setHasTapBot(localBot);
+
+    init();
+  }, [telegramId]);
+
   // 🤖 Auto Tap Bot
   useEffect(() => {
     if (!hasTapBot) return;
@@ -46,12 +68,22 @@ export default function Home() {
       const earned = multiplier;
       const newTotal = coins + earned;
       setCoins(newTotal);
+
       setStamina(prev => {
         const updated = Math.max(0, prev - 1);
         localStorage.setItem("stamina", updated);
         return updated;
       });
+
       localStorage.setItem('tapCoins', newTotal);
+
+      if (telegramId) {
+        updateUser(telegramId, {
+          balance: newTotal,
+          isVIP,
+          vipExpiresAt: null
+        }).catch(err => console.error("Failed to sync:", err));
+      }
 
       if (!isBot) toast.success(`+${earned} 🪙`);
       if (!isBot) setTapping(false);

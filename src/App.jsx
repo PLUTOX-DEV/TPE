@@ -11,6 +11,7 @@ import Leaderboard from "./pages/Leaderboard";
 import BottomNav from "./components/BottomNav";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
+import { loginUser } from "./api/userApi"; // ✅ NEW: import the login API
 
 export default function App() {
   useEffect(() => {
@@ -29,6 +30,25 @@ export default function App() {
         };
         localStorage.setItem("telegramUser", JSON.stringify(userInfo));
         console.log("Telegram User:", userInfo);
+
+        // ✅ Sync with backend
+        loginUser({
+          telegramId: user.id.toString(),
+          username: user.username,
+          fullName: `${user.first_name || ""} ${user.last_name || ""}`,
+        })
+          .then((data) => {
+            console.log("User synced with backend:", data);
+            localStorage.setItem("tapCoins", data.balance || 0);
+            if (data.isVIP) {
+              localStorage.setItem("vipTime", data.vipExpiresAt);
+            } else {
+              localStorage.removeItem("vipTime");
+            }
+          })
+          .catch((err) => {
+            console.error("Backend login failed:", err);
+          });
 
         // ✅ Referral tracking + reward
         const startParam = tg.initDataUnsafe?.start_param;
@@ -55,7 +75,7 @@ export default function App() {
         const coins = parseInt(localStorage.getItem("tapCoins")) || 0;
         const refCount = JSON.parse(localStorage.getItem("referrals") || "{}")[user.username] || 0;
 
-        const existing = leaderboard.find(u => u.username === user.username);
+        const existing = leaderboard.find((u) => u.username === user.username);
 
         if (!existing) {
           leaderboard.push({
