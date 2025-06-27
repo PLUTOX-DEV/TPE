@@ -1,13 +1,13 @@
 const BASE_URL = 'http://localhost:5000/api/users'; // or your production URL
 
-// Get user by telegramId
-
+// ✅ Get user by Telegram ID
 export const getUser = async (telegramId) => {
   const res = await fetch(`${BASE_URL}/${telegramId}`);
   if (!res.ok) throw new Error("Failed to get user");
   return await res.json();
 };
 
+// ✅ Update user data
 export const updateUser = async (telegramId, updates) => {
   const res = await fetch(`${BASE_URL}/update`, {
     method: "POST",
@@ -18,16 +18,15 @@ export const updateUser = async (telegramId, updates) => {
   return await res.json();
 };
 
-
-// Login user
+// ✅ Login or register user with referral
 export async function loginUser(userData) {
   try {
     const { telegramId, username, fullName, referrer = "" } = userData;
 
-    const res = await fetch(`${BASE_URL}/login?ref=${referrer}`, {
+    const res = await fetch(`${BASE_URL}/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ telegramId, username, fullName }),
+      body: JSON.stringify({ telegramId, username, fullName, referrer }), // ✅ pass referrer in body
     });
 
     if (!res.ok) {

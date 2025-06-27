@@ -1,48 +1,38 @@
 import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faUser,
-  faCoins,
-  faBolt,
-  faRobot,
-  faLink,
-  faRocket,
-  faUserFriends,
-  faCheckCircle,
-  faTimesCircle,
-  // faCopy,
+  faUser, faCoins, faBolt, faRobot, faLink,
+  faRocket, faUserFriends, faCheckCircle, faTimesCircle
 } from '@fortawesome/free-solid-svg-icons';
+import { getUser } from "../api/userApi"; // ✅ import API
 
 export default function Profile() {
+  const [user, setUser] = useState(null);
+  const [referrals, setReferrals] = useState([]);
   const [coins, setCoins] = useState(0);
+  const [refEarnings, setRefEarnings] = useState(0);
   const [multiplier, setMultiplier] = useState(1);
   const [regenSpeed, setRegenSpeed] = useState(10000);
   const [hasTapBot, setHasTapBot] = useState(false);
-  const [user, setUser] = useState(null);
-  const [refCount, setRefCount] = useState(0);
-  const [refEarnings, setRefEarnings] = useState(0);
 
   useEffect(() => {
-    setCoins(parseInt(localStorage.getItem("tapCoins")) || 0);
-    setMultiplier(parseInt(localStorage.getItem("tapMultiplier")) || 1);
-    setRegenSpeed(parseInt(localStorage.getItem("staminaRegenSpeed")) || 10000);
-    setHasTapBot(localStorage.getItem("hasTapBot") === "true");
+    const telegramId = localStorage.getItem("telegramId");
+    if (!telegramId) return;
 
-    const savedUser = JSON.parse(localStorage.getItem("telegramUser"));
-    if (savedUser) {
-      setUser(savedUser);
-
-      const referrals = JSON.parse(localStorage.getItem("referrals") || "{}");
-      const count = referrals[savedUser.username] || 0;
-      setRefCount(count);
-
-      const walletKey = `wallet_${savedUser.username}`;
-      const earnings = parseInt(localStorage.getItem(walletKey)) || 0;
-      setRefEarnings(earnings);
-    }
+    getUser(telegramId)
+      .then(data => {
+        setUser(data);
+        setCoins(data.balance);
+        setRefEarnings(data.referralEarnings || 0);
+        setReferrals(data.referrals || []);
+        setMultiplier(data.multiplier || 1);
+        setRegenSpeed(data.staminaRegenSpeed || 10000);
+        setHasTapBot(data.hasTapBot || false);
+      })
+      .catch(err => console.error("Failed to fetch user", err));
   }, []);
 
-  const referralLink = `https://t.me/Djangotestxr_bot?start=${user?.username || 'your_ref_code'}`;
+  const referralLink = `https://t.me/Djangotestxr_bot?start=${user?.username || "your_ref_code"}`;
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[90vh] px-4 bg-gradient-to-b from-black via-gray-900 to-black text-white">
@@ -57,9 +47,9 @@ export default function Profile() {
           )}
           <h2 className="text-xl font-bold text-yellow-400 flex items-center gap-2">
             <FontAwesomeIcon icon={faUser} />
-            {user?.first_name} {user?.last_name}
+            {user?.fullName}
           </h2>
-          <p className="text-gray-400">@{user?.username || 'unknown'}</p>
+          <p className="text-gray-400">@{user?.username}</p>
         </div>
 
         <div className="space-y-4 text-sm">
@@ -76,7 +66,7 @@ export default function Profile() {
               </span>
             }
           />
-          <InfoRow icon={faUserFriends} label="Referred Users:" value={refCount} color="text-yellow-300" />
+          <InfoRow icon={faUserFriends} label="Referrals:" value={referrals.length} color="text-yellow-300" />
           <InfoRow icon={faCoins} label="Referral Earnings:" value={`${refEarnings} 🪙`} color="text-yellow-300" />
         </div>
 
@@ -88,19 +78,18 @@ export default function Profile() {
           <code className="bg-gray-800 px-2 py-1 rounded text-sm block text-white break-all">
             {referralLink}
           </code>
-
-          {/* Optional Copy Button
-          <button
-            className="mt-2 text-xs text-blue-400 hover:underline"
-            onClick={() => {
-              navigator.clipboard.writeText(referralLink);
-              alert("Referral link copied!");
-            }}
-          >
-            <FontAwesomeIcon icon={faCopy} className="mr-1" />
-            Copy
-          </button> */}
         </div>
+
+        {referrals.length > 0 && (
+          <div className="mt-6">
+            <h3 className="text-lg font-bold text-yellow-300 mb-2">Referred Users:</h3>
+            <ul className="text-sm space-y-1">
+              {referrals.map((r, idx) => (
+                <li key={idx} className="text-gray-300">👤 {r.username}</li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   );
