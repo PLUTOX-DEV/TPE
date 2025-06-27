@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useState } from 'react';
 import coinImg from '../assets/coin.jpg';
 import { StaminaContext } from '../context/StaminaContext';
 import toast from 'react-hot-toast';
-import { getUser, updateUser } from '../api/userApi.jsx';
+import { getUser, updateUser } from '../api/userApi';
 
 export default function Home() {
   const { stamina, setStamina, maxStamina } = useContext(StaminaContext);
@@ -14,11 +14,11 @@ export default function Home() {
   const [hasTapBot, setHasTapBot] = useState(false);
   const [isVIP, setIsVIP] = useState(false);
 
-  const telegramId = localStorage.getItem('telegramId'); // Must be set after Telegram login
+  const telegramId = localStorage.getItem('telegramId');
 
-  // 🔁 Load user from backend
+  // 🔁 Load user info on first load
   useEffect(() => {
-    const init = async () => {
+    const loadUser = async () => {
       if (!telegramId) return;
 
       try {
@@ -26,14 +26,15 @@ export default function Home() {
         setCoins(user.balance || 0);
         setIsVIP(user.isVIP || false);
 
-        // Save to localStorage for offline use
-        localStorage.setItem('tapCoins', user.balance);
-        localStorage.setItem('isVIP', user.isVIP);
+        // Cache for offline play
+        localStorage.setItem('tapCoins', user.balance || 0);
+        localStorage.setItem('isVIP', user.isVIP || false);
       } catch (err) {
-        console.error('Failed to load user', err);
+        console.error('❌ Failed to fetch user from backend:', err);
       }
     };
 
+    // Local fallback data
     const localCoins = parseInt(localStorage.getItem('tapCoins')) || 0;
     const localRegen = parseInt(localStorage.getItem('staminaRegenSpeed')) || 10000;
     const localMult = parseInt(localStorage.getItem('tapMultiplier')) || 1;
@@ -44,19 +45,20 @@ export default function Home() {
     setMultiplier(localMult);
     setHasTapBot(localBot);
 
-    init();
+    loadUser();
   }, [telegramId]);
 
   // 🤖 Auto Tap Bot
   useEffect(() => {
     if (!hasTapBot) return;
-    const botInterval = setInterval(() => {
+    const interval = setInterval(() => {
       if (stamina > 0) handleTap(true);
     }, 3000);
-    return () => clearInterval(botInterval);
+    return () => clearInterval(interval);
   }, [stamina, hasTapBot]);
 
-  const handleTap = (isBot = false) => {
+  // 🧠 Main Tap Handler
+  const handleTap = async (isBot = false) => {
     if (tapping || stamina <= 0) {
       if (!isBot) toast.error("You're out of stamina!");
       return;
@@ -64,10 +66,13 @@ export default function Home() {
 
     if (!isBot) setTapping(true);
 
-    setTimeout(() => {
-      const earned = multiplier;
-      const newTotal = coins + earned;
+    const earned = multiplier;
+    const newTotal = coins + earned;
+
+    setTimeout(async () => {
+      // 🧠 Update UI & localStorage
       setCoins(newTotal);
+      localStorage.setItem('tapCoins', newTotal);
 
       setStamina(prev => {
         const updated = Math.max(0, prev - 1);
@@ -75,14 +80,17 @@ export default function Home() {
         return updated;
       });
 
-      localStorage.setItem('tapCoins', newTotal);
-
+      // ✅ Sync with backend
       if (telegramId) {
-        updateUser(telegramId, {
-          balance: newTotal,
-          isVIP,
-          vipExpiresAt: null
-        }).catch(err => console.error("Failed to sync:", err));
+        try {
+          await updateUser(telegramId, {
+            balance: newTotal,
+            isVIP,
+            vipExpiresAt: null,
+          });
+        } catch (err) {
+          console.error('❌ Failed to sync with backend:', err);
+        }
       }
 
       if (!isBot) toast.success(`+${earned} 🪙`);
