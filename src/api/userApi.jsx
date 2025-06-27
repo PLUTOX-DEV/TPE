@@ -1,4 +1,4 @@
-const BASE_URL = 'http://localhost:5000/api/users'; // or your production URL
+const BASE_URL = 'https://nakabozoz.onrender.com/api/users'; // or your production URL
 
 // ✅ Get user by Telegram ID
 export const getUser = async (telegramId) => {
@@ -9,7 +9,7 @@ export const getUser = async (telegramId) => {
 
 // ✅ Update user data
 export const updateUser = async (telegramId, updates) => {
-  const res = await fetch(`${BASE_URL}/update`, {
+  const res = await fetch(`${BASE_URL}update`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ telegramId, ...updates }),
@@ -23,7 +23,7 @@ export async function loginUser(userData) {
   try {
     const { telegramId, username, fullName, referrer = "" } = userData;
 
-    const res = await fetch(`${BASE_URL}/login`, {
+    const res = await fetch(`${BASE_URL}login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ telegramId, username, fullName, referrer }), // ✅ pass referrer in body
