@@ -15,6 +15,7 @@ import {
   faMedal,
   faRepeat,
 } from "@fortawesome/free-solid-svg-icons";
+import { updateUser } from "../api/userApi"; // 🔥 Added backend sync
 
 const data = [
   { option: "+0", style: { backgroundColor: "#7c3aed", textColor: "white" } },
@@ -102,10 +103,22 @@ export default function Spin() {
     incrementSpinUsed();
   };
 
-  const handleReward = (rewardText) => {
+  const handleReward = async (rewardText) => {
     const rewardAmount = parseInt(rewardText.replace(/\D/g, "")) || 0;
     const newBalance = balance + rewardAmount;
     setBalance(newBalance);
+    localStorage.setItem("tapCoins", newBalance);
+
+    // 🔁 Sync with backend
+    const telegramId = localStorage.getItem("telegramId");
+    if (telegramId) {
+      try {
+        await updateUser(telegramId, { balance: newBalance });
+      } catch (err) {
+        console.error("Spin reward sync failed:", err);
+      }
+    }
+
     toast.success(
       <>
         <FontAwesomeIcon icon={faCoins} className="mr-2" />
@@ -138,7 +151,7 @@ export default function Spin() {
       toast.success(
         <>
           <FontAwesomeIcon icon={faGem} className="mr-2" />
-          {PACKAGES[pack].label} package activated – {PACKAGES[pack].spins} spins/day!
+          {PACKAGES[pack].label} activated – {PACKAGES[pack].spins} spins/day!
         </>
       );
       setShowPremium(false);
@@ -151,8 +164,6 @@ export default function Spin() {
   return (
     <div className="min-h-screen bg-[#0f0f0f] text-white flex items-center justify-center px-4">
       <div className="w-full max-w-md flex flex-col items-center py-10 text-center">
-
-        {/* Wallet Connect Button */}
         <div className="w-full flex justify-end mb-4">
           <TonConnectButton />
         </div>
@@ -233,13 +244,11 @@ export default function Spin() {
       {showPremium && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-[#111] p-6 rounded-xl text-white max-w-sm w-full text-center">
-
             <h2 className="text-xl font-bold text-yellow-400 mb-4 flex justify-center items-center">
               <FontAwesomeIcon icon={faGem} className="mr-2" />
               Premium Packages
             </h2>
 
-            {/* Warning if wallet not connected */}
             {!tonConnectUI.connected && (
               <div className="text-yellow-400 text-center mb-4 font-semibold">
                 Please connect your TON wallet to purchase premium packages.
@@ -256,11 +265,7 @@ export default function Spin() {
                 return (
                   <li key={key} className="flex justify-between items-center">
                     <div className="flex items-center space-x-2">
-                      <FontAwesomeIcon
-                        icon={faMedal}
-                        style={{ color: medalColors[key] }}
-                        size="lg"
-                      />
+                      <FontAwesomeIcon icon={faMedal} style={{ color: medalColors[key] }} size="lg" />
                       <span className="font-semibold">{pack.label}</span>
                       <span className="flex items-center ml-4 text-yellow-400">
                         <FontAwesomeIcon icon={faRepeat} className="mr-1" />
@@ -275,15 +280,8 @@ export default function Spin() {
                       onClick={() => handleBuyPackage(key)}
                       disabled={!tonConnectUI.connected}
                       className={`px-4 py-1 rounded-full font-bold text-sm flex items-center ${
-                        tonConnectUI.connected
-                          ? "bg-green-600 hover:bg-green-700"
-                          : "bg-gray-600 cursor-not-allowed"
+                        tonConnectUI.connected ? "bg-green-600 hover:bg-green-700" : "bg-gray-600 cursor-not-allowed"
                       }`}
-                      title={
-                        tonConnectUI.connected
-                          ? ""
-                          : "Connect your TON wallet first"
-                      }
                     >
                       Buy
                     </button>
