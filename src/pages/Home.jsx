@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
-import coinImg from '../assets/coin.jpg';
+import coinImg from '../assets/mini.jpg';
 import { StaminaContext } from '../context/StaminaContext';
 import toast from 'react-hot-toast';
 import { getUser, updateUser } from '../api/userApi';
