@@ -1,19 +1,21 @@
 import React, { useEffect, useState } from "react";
+import { buyTapBot as buyTapBotAPI } from "../api/userApi";
 
 export default function Store() {
   const [coins, setCoins] = useState(0);
-  const [tapMultiplier, setTapMultiplier] = useState(1);
+  const [multiplier, setMultiplier] = useState(1);
   const [regenSpeed, setRegenSpeed] = useState(10000);
   const [hasTapBot, setHasTapBot] = useState(false);
+  const telegramId = localStorage.getItem("telegramId");
 
   useEffect(() => {
     const savedCoins = parseInt(localStorage.getItem("tapCoins")) || 0;
-    const savedTapMultiplier = parseInt(localStorage.getItem("tapMultiplier")) || 1;
+    const savedMultiplier = parseInt(localStorage.getItem("tapMultiplier")) || 1;
     const savedRegen = parseInt(localStorage.getItem("staminaRegenSpeed")) || 10000;
     const savedBot = localStorage.getItem("hasTapBot") === "true";
 
     setCoins(savedCoins);
-    setTapMultiplier(savedTapMultiplier);
+    setMultiplier(savedMultiplier);
     setRegenSpeed(savedRegen);
     setHasTapBot(savedBot);
   }, []);
@@ -26,8 +28,8 @@ export default function Store() {
 
   const buyMultiplier = () => {
     if (coins >= 50) {
-      const newMult = tapMultiplier + 1;
-      setTapMultiplier(newMult);
+      const newMult = multiplier + 1;
+      setMultiplier(newMult);
       localStorage.setItem("tapMultiplier", newMult);
       updateCoins(50);
     } else {
@@ -46,26 +48,45 @@ export default function Store() {
     }
   };
 
-  const buyTapBot = () => {
-    if (coins >= 100 && !hasTapBot) {
+  const buyTapBot = async () => {
+    if (!telegramId) return alert("Telegram ID not found.");
+
+    if (hasTapBot) {
+      return alert("You already own the Tap Bot!");
+    }
+
+    if (coins < 100) {
+      return alert("Not enough coins.");
+    }
+
+    try {
+      const response = await buyTapBotAPI(telegramId);
+      const updatedUser = response.user;
+
       setHasTapBot(true);
+      setCoins(updatedUser.balance);
+
+      localStorage.setItem("tapCoins", updatedUser.balance);
       localStorage.setItem("hasTapBot", "true");
-      updateCoins(100);
-    } else {
-      alert(hasTapBot ? "You already own the Tap Bot!" : "Not enough coins.");
+
+      alert("🤖 Tap Bot purchased successfully!");
+    } catch (err) {
+      alert(err.message || "Failed to buy Tap Bot.");
     }
   };
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-4 py-10">
       <h1 className="text-3xl font-bold text-yellow-400 mb-6">🛍 Tapper Store</h1>
-      <p className="mb-6 text-lg">🪙 Coins: <span className="text-green-400">{coins}</span></p>
+      <p className="mb-6 text-lg">
+        🪙 Coins: <span className="text-green-400">{coins}</span>
+      </p>
 
       <div className="space-y-6 w-full max-w-sm">
         {/* Multiplier Upgrade */}
         <div className="bg-white/10 p-4 rounded-xl border border-yellow-500/20">
           <p className="text-lg font-bold mb-1">🔥 Tap Multiplier</p>
-          <p className="text-sm mb-2">Current: x{tapMultiplier}</p>
+          <p className="text-sm mb-2">Current: x{multiplier}</p>
           <button
             onClick={buyMultiplier}
             className="w-full py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-bold"
@@ -89,11 +110,22 @@ export default function Store() {
         {/* Tap Bot */}
         <div className="bg-white/10 p-4 rounded-xl border border-yellow-500/20">
           <p className="text-lg font-bold mb-1">🤖 Auto Tap Bot</p>
-          <p className="text-sm mb-2">Status: {hasTapBot ? "✅ Owned" : "❌ Not Owned"}</p>
+          <p className="text-sm mb-2">
+            Status:{" "}
+            {hasTapBot ? (
+              <span className="text-green-400 font-bold">✅ Owned</span>
+            ) : (
+              <span className="text-red-400 font-bold">❌ Not Owned</span>
+            )}
+          </p>
           <button
             onClick={buyTapBot}
             disabled={hasTapBot}
-            className={`w-full py-2 ${hasTapBot ? "bg-gray-600 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"} rounded-lg font-bold`}
+            className={`w-full py-2 ${
+              hasTapBot
+                ? "bg-gray-600 cursor-not-allowed"
+                : "bg-green-600 hover:bg-green-700"
+            } rounded-lg font-bold`}
           >
             {hasTapBot ? "Already Owned" : "Buy for 100 🪙"}
           </button>

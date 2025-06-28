@@ -17,6 +17,22 @@ export const updateUser = async (telegramId, updates) => {
   if (!res.ok) throw new Error("Failed to update user");
   return await res.json();
 };
+// ✅ Buy Tap Bot
+export const buyTapBot = async (telegramId) => {
+  const res = await fetch(`${BASE_URL}/buy-tap-bot`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ telegramId }),
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(errorData.message || "Failed to buy Tap Bot");
+  }
+
+  return await res.json(); // returns updated user object
+};
+
 
 // ✅ Login or register user with referral
 export async function loginUser(userData) {
