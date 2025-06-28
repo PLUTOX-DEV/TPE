@@ -1,95 +1,82 @@
 import React, { useEffect, useState } from "react";
-import { updateUser } from "../api/userApi";
+import { getUser, updateUser, buyTapBot } from "../api/userApi";
 
 export default function Store() {
   const [coins, setCoins] = useState(0);
   const [multiplier, setMultiplier] = useState(1);
   const [regenSpeed, setRegenSpeed] = useState(10000);
   const [hasTapBot, setHasTapBot] = useState(false);
+  const [loading, setLoading] = useState(false);
+
   const telegramId = localStorage.getItem("telegramId");
 
   useEffect(() => {
-    const savedCoins = parseInt(localStorage.getItem("tapCoins")) || 0;
-    const savedMultiplier = parseInt(localStorage.getItem("tapMultiplier")) || 1;
-    const savedRegen = parseInt(localStorage.getItem("staminaRegenSpeed")) || 10000;
-    const savedBot = localStorage.getItem("hasTapBot") === "true";
+    if (!telegramId) return;
 
-    setCoins(savedCoins);
-    setMultiplier(savedMultiplier);
-    setRegenSpeed(savedRegen);
-    setHasTapBot(savedBot);
+    getUser(telegramId)
+      .then(data => {
+        setCoins(data.balance);
+        setMultiplier(data.multiplier || 1);
+        setRegenSpeed(data.staminaRegenSpeed || 10000);
+        setHasTapBot(data.hasTapBot || false);
+      })
+      .catch(err => console.error("Failed to load user", err));
   }, []);
 
-  const updateCoins = (amount) => {
-    const newBalance = coins - amount;
+  const updateBalance = async (newBalance, updatedFields = {}) => {
+    await updateUser(telegramId, { balance: newBalance, ...updatedFields });
     setCoins(newBalance);
-    localStorage.setItem("tapCoins", newBalance);
-    return newBalance;
   };
 
-  const buyMultiplier = async () => {
-    if (!telegramId) return alert("Telegram ID not found.");
+  const handleBuyMultiplier = async () => {
     if (coins < 50) return alert("Not enough coins.");
-
     const newMult = multiplier + 1;
-    const newBalance = updateCoins(50);
-
-    setMultiplier(newMult);
-    localStorage.setItem("tapMultiplier", newMult);
+    const newBalance = coins - 50;
 
     try {
-      await updateUser(telegramId, {
-        multiplier: newMult,
-        balance: newBalance,
-      });
-      alert("🔥 Multiplier upgraded!");
+      setLoading(true);
+      await updateBalance(newBalance, { multiplier: newMult });
+      setMultiplier(newMult);
+      alert("🔥 Tap Multiplier upgraded!");
     } catch (err) {
-      console.error(err);
-      alert("Failed to update multiplier on backend.");
+      alert("Failed to upgrade multiplier.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const buyRegen = async () => {
-    if (!telegramId) return alert("Telegram ID not found.");
+  const handleBuyRegen = async () => {
     if (coins < 80) return alert("Not enough coins.");
-
     const newSpeed = Math.max(2000, regenSpeed - 1000);
-    const newBalance = updateCoins(80);
-
-    setRegenSpeed(newSpeed);
-    localStorage.setItem("staminaRegenSpeed", newSpeed);
+    const newBalance = coins - 80;
 
     try {
-      await updateUser(telegramId, {
-        staminaRegenSpeed: newSpeed,
-        balance: newBalance,
-      });
-      alert("⚡ Regen speed improved!");
+      setLoading(true);
+      await updateBalance(newBalance, { staminaRegenSpeed: newSpeed });
+      setRegenSpeed(newSpeed);
+      alert("⚡ Regen Speed improved!");
     } catch (err) {
-      console.error(err);
-      alert("Failed to update regen speed on backend.");
+      alert("Failed to upgrade regen speed.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const buyTapBot = async () => {
-    if (!telegramId) return alert("Telegram ID not found.");
+  const handleBuyTapBot = async () => {
     if (hasTapBot) return alert("You already own the Tap Bot!");
     if (coins < 100) return alert("Not enough coins.");
 
-    const newBalance = updateCoins(100);
-
-    setHasTapBot(true);
-    localStorage.setItem("hasTapBot", "true");
-
     try {
-      await updateUser(telegramId, {
-        hasTapBot: true,
-        balance: newBalance,
-      });
-      alert("🤖 Tap Bot purchased successfully!");
+      setLoading(true);
+      const response = await buyTapBot(telegramId);
+      const updatedUser = response.user;
+      setCoins(updatedUser.balance);
+      setHasTapBot(true);
+      alert("🤖 Tap Bot purchased!");
     } catch (err) {
-      console.error(err);
-      alert("Failed to update Tap Bot on backend.");
+      alert(err.message || "Failed to buy Tap Bot.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -101,29 +88,23 @@ export default function Store() {
       </p>
 
       <div className="space-y-6 w-full max-w-sm">
-        {/* Multiplier Upgrade */}
-        <div className="bg-white/10 p-4 rounded-xl border border-yellow-500/20">
-          <p className="text-lg font-bold mb-1">🔥 Tap Multiplier</p>
-          <p className="text-sm mb-2">Current: x{multiplier}</p>
-          <button
-            onClick={buyMultiplier}
-            className="w-full py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-bold"
-          >
-            Buy for 50 🪙
-          </button>
-        </div>
+        {/* Tap Multiplier */}
+        <UpgradeCard
+          title="🔥 Tap Multiplier"
+          subtitle={`Current: x${multiplier}`}
+          onClick={handleBuyMultiplier}
+          cost={50}
+          loading={loading}
+        />
 
-        {/* Regen Upgrade */}
-        <div className="bg-white/10 p-4 rounded-xl border border-yellow-500/20">
-          <p className="text-lg font-bold mb-1">⚡ Faster Stamina Regen</p>
-          <p className="text-sm mb-2">Current speed: {regenSpeed / 1000}s</p>
-          <button
-            onClick={buyRegen}
-            className="w-full py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold"
-          >
-            Buy for 80 🪙
-          </button>
-        </div>
+        {/* Regen Speed */}
+        <UpgradeCard
+          title="⚡ Faster Stamina Regen"
+          subtitle={`Current: ${regenSpeed / 1000}s`}
+          onClick={handleBuyRegen}
+          cost={80}
+          loading={loading}
+        />
 
         {/* Tap Bot */}
         <div className="bg-white/10 p-4 rounded-xl border border-yellow-500/20">
@@ -137,8 +118,8 @@ export default function Store() {
             )}
           </p>
           <button
-            onClick={buyTapBot}
-            disabled={hasTapBot}
+            onClick={handleBuyTapBot}
+            disabled={hasTapBot || loading}
             className={`w-full py-2 ${
               hasTapBot
                 ? "bg-gray-600 cursor-not-allowed"
@@ -149,6 +130,22 @@ export default function Store() {
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function UpgradeCard({ title, subtitle, onClick, cost, loading }) {
+  return (
+    <div className="bg-white/10 p-4 rounded-xl border border-yellow-500/20">
+      <p className="text-lg font-bold mb-1">{title}</p>
+      <p className="text-sm mb-2">{subtitle}</p>
+      <button
+        onClick={onClick}
+        disabled={loading}
+        className="w-full py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold"
+      >
+        Buy for {cost} 🪙
+      </button>
     </div>
   );
 }

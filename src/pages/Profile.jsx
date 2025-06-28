@@ -2,9 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faUser, faCoins, faBolt, faRobot, faLink,
-  faRocket, faUserFriends, faCheckCircle, faTimesCircle
+  faRocket, faUserFriends, faCheckCircle, faTimesCircle, faCopy
 } from '@fortawesome/free-solid-svg-icons';
-import { getUser } from "../api/userApi"; // API function
+import { getUser } from "../api/userApi";
+import toast from 'react-hot-toast'; // ✅ Import toast
 
 export default function Profile() {
   const [user, setUser] = useState(null);
@@ -25,7 +26,7 @@ export default function Profile() {
         setCoins(data.balance);
         setRefEarnings(data.referralEarnings || 0);
         setReferrals(data.referrals || []);
-        setMultiplier(data.multiplier || 1); // ✅ fixed field name
+        setMultiplier(data.multiplier || 1);
         setRegenSpeed(data.staminaRegenSpeed || 10000);
         setHasTapBot(data.hasTapBot || false);
       })
@@ -33,6 +34,11 @@ export default function Profile() {
   }, []);
 
   const referralLink = `https://t.me/Djangotestxr_bot?start=${user?.username || "your_ref_code"}`;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(referralLink);
+    toast.success("Referral link copied!");
+  };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[90vh] px-4 bg-gradient-to-b from-black via-gray-900 to-black text-white">
@@ -70,14 +76,18 @@ export default function Profile() {
           <InfoRow icon={faCoins} label="Referral Earnings:" value={`${refEarnings} 🪙`} color="text-yellow-300" />
         </div>
 
+        {/* Referral Link with Copy Button */}
         <div className="mt-6">
           <p className="text-gray-300 mb-1 flex items-center">
             <FontAwesomeIcon icon={faLink} className="text-yellow-400 mr-2" />
             Referral Link:
           </p>
-          <code className="bg-gray-800 px-2 py-1 rounded text-sm block text-white break-all">
-            {referralLink}
-          </code>
+          <div className="flex items-center gap-2 bg-gray-800 px-2 py-1 rounded text-sm text-white">
+            <code className="flex-1 break-all">{referralLink}</code>
+            <button onClick={handleCopy} title="Copy link">
+              <FontAwesomeIcon icon={faCopy} className="text-yellow-400 hover:text-yellow-300" />
+            </button>
+          </div>
         </div>
 
         {referrals.length > 0 && (

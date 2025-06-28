@@ -16,48 +16,56 @@ export default function Home() {
 
   const telegramId = localStorage.getItem('telegramId');
 
-  // 🔁 Load user info on first load
   useEffect(() => {
     const loadUser = async () => {
       if (!telegramId) return;
 
       try {
         const user = await getUser(telegramId);
+
         setCoins(user.balance || 0);
+        setMultiplier(user.multiplier || 1);
+        setRegenSpeed(user.staminaRegenSpeed || 10000);
+        setHasTapBot(user.hasTapBot || false);
         setIsVIP(user.isVIP || false);
 
-        // Cache for offline play
+        // ✅ Optional local cache (used in offline play)
         localStorage.setItem('tapCoins', user.balance || 0);
+        localStorage.setItem('tapMultiplier', user.multiplier || 1);
+        localStorage.setItem('staminaRegenSpeed', user.staminaRegenSpeed || 10000);
+        localStorage.setItem('hasTapBot', user.hasTapBot ? 'true' : 'false');
         localStorage.setItem('isVIP', user.isVIP || false);
       } catch (err) {
         console.error('❌ Failed to fetch user from backend:', err);
+
+        // ⛔ Use local fallback only if backend fails
+        const localCoins = parseInt(localStorage.getItem('tapCoins')) || 0;
+        const localRegen = parseInt(localStorage.getItem('staminaRegenSpeed')) || 10000;
+        const localMult = parseInt(localStorage.getItem('tapMultiplier')) || 1;
+        const localBot = localStorage.getItem('hasTapBot') === 'true';
+
+        setCoins(localCoins);
+        setRegenSpeed(localRegen);
+        setMultiplier(localMult);
+        setHasTapBot(localBot);
       }
     };
-
-    // Local fallback data
-    const localCoins = parseInt(localStorage.getItem('tapCoins')) || 0;
-    const localRegen = parseInt(localStorage.getItem('staminaRegenSpeed')) || 10000;
-    const localMult = parseInt(localStorage.getItem('tapMultiplier')) || 1;
-    const localBot = localStorage.getItem('hasTapBot') === 'true';
-
-    setCoins(localCoins);
-    setRegenSpeed(localRegen);
-    setMultiplier(localMult);
-    setHasTapBot(localBot);
 
     loadUser();
   }, [telegramId]);
 
-  // 🤖 Auto Tap Bot
+  // 🤖 Auto Tap Bot Logic
   useEffect(() => {
     if (!hasTapBot) return;
+
     const interval = setInterval(() => {
       if (stamina > 0) handleTap(true);
     }, 3000);
+
     return () => clearInterval(interval);
   }, [stamina, hasTapBot]);
 
-  // 🧠 Main Tap Handler
+  // 🧠 Tap Handler
   const handleTap = async (isBot = false) => {
     if (tapping || stamina <= 0) {
       if (!isBot) toast.error("You're out of stamina!");
@@ -70,7 +78,6 @@ export default function Home() {
     const newTotal = coins + earned;
 
     setTimeout(async () => {
-      // 🧠 Update UI & localStorage
       setCoins(newTotal);
       localStorage.setItem('tapCoins', newTotal);
 
@@ -80,13 +87,12 @@ export default function Home() {
         return updated;
       });
 
-      // ✅ Sync with backend
+      // 🛰 Sync backend
       if (telegramId) {
         try {
           await updateUser(telegramId, {
             balance: newTotal,
             isVIP,
-            vipExpiresAt: null,
           });
         } catch (err) {
           console.error('❌ Failed to sync with backend:', err);
