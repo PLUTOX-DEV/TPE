@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import toast from "react-hot-toast";
+import { updateUser } from "../api/userApi"; // 🔁 Backend sync
 
 export default function Store() {
   const [coins, setCoins] = useState(0);
@@ -18,10 +20,21 @@ export default function Store() {
     setHasTapBot(savedBot);
   }, []);
 
+  const syncBackend = async (data) => {
+    const telegramId = localStorage.getItem("telegramId");
+    if (!telegramId) return;
+    try {
+      await updateUser(telegramId, data);
+    } catch (err) {
+      console.error("Backend sync failed:", err);
+    }
+  };
+
   const updateCoins = (amount) => {
     const newBalance = coins - amount;
     setCoins(newBalance);
     localStorage.setItem("tapCoins", newBalance);
+    syncBackend({ balance: newBalance });
   };
 
   const buyMultiplier = () => {
@@ -30,8 +43,10 @@ export default function Store() {
       setMultiplier(newMult);
       localStorage.setItem("tapMultiplier", newMult);
       updateCoins(50);
+      toast.success(`Multiplier upgraded to x${newMult}`);
+      syncBackend({ tapMultiplier: newMult });
     } else {
-      alert("Not enough coins.");
+      toast.error("Not enough coins.");
     }
   };
 
@@ -41,8 +56,10 @@ export default function Store() {
       setRegenSpeed(newSpeed);
       localStorage.setItem("staminaRegenSpeed", newSpeed);
       updateCoins(80);
+      toast.success(`Regen speed now ${newSpeed / 1000}s`);
+      syncBackend({ staminaRegenSpeed: newSpeed });
     } else {
-      alert("Not enough coins.");
+      toast.error("Not enough coins.");
     }
   };
 
@@ -51,8 +68,10 @@ export default function Store() {
       setHasTapBot(true);
       localStorage.setItem("hasTapBot", "true");
       updateCoins(100);
+      toast.success("Tap Bot unlocked!");
+      syncBackend({ hasTapBot: true });
     } else {
-      alert(hasTapBot ? "You already own the Tap Bot!" : "Not enough coins.");
+      toast.error(hasTapBot ? "You already own the Tap Bot!" : "Not enough coins.");
     }
   };
 
@@ -93,7 +112,9 @@ export default function Store() {
           <button
             onClick={buyTapBot}
             disabled={hasTapBot}
-            className={`w-full py-2 ${hasTapBot ? "bg-gray-600 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"} rounded-lg font-bold`}
+            className={`w-full py-2 ${
+              hasTapBot ? "bg-gray-600 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"
+            } rounded-lg font-bold`}
           >
             {hasTapBot ? "Already Owned" : "Buy for 100 🪙"}
           </button>
