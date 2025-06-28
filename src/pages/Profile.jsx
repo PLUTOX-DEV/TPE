@@ -4,14 +4,14 @@ import {
   faUser, faCoins, faBolt, faRobot, faLink,
   faRocket, faUserFriends, faCheckCircle, faTimesCircle
 } from '@fortawesome/free-solid-svg-icons';
-import { getUser } from "../api/userApi"; // API call
+import { getUser } from "../api/userApi"; // API function
 
 export default function Profile() {
   const [user, setUser] = useState(null);
   const [referrals, setReferrals] = useState([]);
   const [coins, setCoins] = useState(0);
   const [refEarnings, setRefEarnings] = useState(0);
-  const [tapMultiplier, setTapMultiplier] = useState(1);
+  const [multiplier, setMultiplier] = useState(1);
   const [regenSpeed, setRegenSpeed] = useState(10000);
   const [hasTapBot, setHasTapBot] = useState(false);
 
@@ -25,7 +25,7 @@ export default function Profile() {
         setCoins(data.balance);
         setRefEarnings(data.referralEarnings || 0);
         setReferrals(data.referrals || []);
-        setTapMultiplier(data.tapMultiplier || 1);
+        setMultiplier(data.multiplier || 1); // ✅ fixed field name
         setRegenSpeed(data.staminaRegenSpeed || 10000);
         setHasTapBot(data.hasTapBot || false);
       })
@@ -54,7 +54,7 @@ export default function Profile() {
 
         <div className="space-y-4 text-sm">
           <InfoRow icon={faCoins} label="Coin Balance:" value={`${coins} 🪙`} color="text-green-400" />
-          <InfoRow icon={faRocket} label="Tap Multiplier:" value={`x${tapMultiplier}`} color="text-purple-300" />
+          <InfoRow icon={faRocket} label="Tap Multiplier:" value={`x${multiplier}`} color="text-purple-300" />
           <InfoRow icon={faBolt} label="Regen Speed:" value={`${regenSpeed / 1000}s`} color="text-blue-300" />
           <InfoRow
             icon={faRobot}

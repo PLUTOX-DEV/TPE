@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { buyTapBot as buyTapBotAPI } from "../api/userApi";
+import { updateUser } from "../api/userApi";
 
 export default function Store() {
   const [coins, setCoins] = useState(0);
@@ -24,54 +24,72 @@ export default function Store() {
     const newBalance = coins - amount;
     setCoins(newBalance);
     localStorage.setItem("tapCoins", newBalance);
+    return newBalance;
   };
 
-  const buyMultiplier = () => {
-    if (coins >= 50) {
-      const newMult = multiplier + 1;
-      setMultiplier(newMult);
-      localStorage.setItem("tapMultiplier", newMult);
-      updateCoins(50);
-    } else {
-      alert("Not enough coins.");
+  const buyMultiplier = async () => {
+    if (!telegramId) return alert("Telegram ID not found.");
+    if (coins < 50) return alert("Not enough coins.");
+
+    const newMult = multiplier + 1;
+    const newBalance = updateCoins(50);
+
+    setMultiplier(newMult);
+    localStorage.setItem("tapMultiplier", newMult);
+
+    try {
+      await updateUser(telegramId, {
+        multiplier: newMult,
+        balance: newBalance,
+      });
+      alert("🔥 Multiplier upgraded!");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to update multiplier on backend.");
     }
   };
 
-  const buyRegen = () => {
-    if (coins >= 80) {
-      const newSpeed = Math.max(2000, regenSpeed - 1000);
-      setRegenSpeed(newSpeed);
-      localStorage.setItem("staminaRegenSpeed", newSpeed);
-      updateCoins(80);
-    } else {
-      alert("Not enough coins.");
+  const buyRegen = async () => {
+    if (!telegramId) return alert("Telegram ID not found.");
+    if (coins < 80) return alert("Not enough coins.");
+
+    const newSpeed = Math.max(2000, regenSpeed - 1000);
+    const newBalance = updateCoins(80);
+
+    setRegenSpeed(newSpeed);
+    localStorage.setItem("staminaRegenSpeed", newSpeed);
+
+    try {
+      await updateUser(telegramId, {
+        staminaRegenSpeed: newSpeed,
+        balance: newBalance,
+      });
+      alert("⚡ Regen speed improved!");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to update regen speed on backend.");
     }
   };
 
   const buyTapBot = async () => {
     if (!telegramId) return alert("Telegram ID not found.");
+    if (hasTapBot) return alert("You already own the Tap Bot!");
+    if (coins < 100) return alert("Not enough coins.");
 
-    if (hasTapBot) {
-      return alert("You already own the Tap Bot!");
-    }
+    const newBalance = updateCoins(100);
 
-    if (coins < 100) {
-      return alert("Not enough coins.");
-    }
+    setHasTapBot(true);
+    localStorage.setItem("hasTapBot", "true");
 
     try {
-      const response = await buyTapBotAPI(telegramId);
-      const updatedUser = response.user;
-
-      setHasTapBot(true);
-      setCoins(updatedUser.balance);
-
-      localStorage.setItem("tapCoins", updatedUser.balance);
-      localStorage.setItem("hasTapBot", "true");
-
+      await updateUser(telegramId, {
+        hasTapBot: true,
+        balance: newBalance,
+      });
       alert("🤖 Tap Bot purchased successfully!");
     } catch (err) {
-      alert(err.message || "Failed to buy Tap Bot.");
+      console.error(err);
+      alert("Failed to update Tap Bot on backend.");
     }
   };
 
