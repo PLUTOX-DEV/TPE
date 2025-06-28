@@ -1,52 +1,37 @@
 import React, { useEffect, useState } from "react";
-import toast from "react-hot-toast";
-import { updateUser } from "../api/userApi"; // 🔁 Backend sync
 
 export default function Store() {
   const [coins, setCoins] = useState(0);
-  const [multiplier, setMultiplier] = useState(1);
+  const [tapMultiplier, setTapMultiplier] = useState(1);
   const [regenSpeed, setRegenSpeed] = useState(10000);
   const [hasTapBot, setHasTapBot] = useState(false);
 
   useEffect(() => {
     const savedCoins = parseInt(localStorage.getItem("tapCoins")) || 0;
-    const savedMultiplier = parseInt(localStorage.getItem("tapMultiplier")) || 1;
+    const savedTapMultiplier = parseInt(localStorage.getItem("tapMultiplier")) || 1;
     const savedRegen = parseInt(localStorage.getItem("staminaRegenSpeed")) || 10000;
     const savedBot = localStorage.getItem("hasTapBot") === "true";
 
     setCoins(savedCoins);
-    setMultiplier(savedMultiplier);
+    setTapMultiplier(savedTapMultiplier);
     setRegenSpeed(savedRegen);
     setHasTapBot(savedBot);
   }, []);
-
-  const syncBackend = async (data) => {
-    const telegramId = localStorage.getItem("telegramId");
-    if (!telegramId) return;
-    try {
-      await updateUser(telegramId, data);
-    } catch (err) {
-      console.error("Backend sync failed:", err);
-    }
-  };
 
   const updateCoins = (amount) => {
     const newBalance = coins - amount;
     setCoins(newBalance);
     localStorage.setItem("tapCoins", newBalance);
-    syncBackend({ balance: newBalance });
   };
 
   const buyMultiplier = () => {
     if (coins >= 50) {
-      const newMult = multiplier + 1;
-      setMultiplier(newMult);
+      const newMult = tapMultiplier + 1;
+      setTapMultiplier(newMult);
       localStorage.setItem("tapMultiplier", newMult);
       updateCoins(50);
-      toast.success(`Multiplier upgraded to x${newMult}`);
-      syncBackend({ tapMultiplier: newMult });
     } else {
-      toast.error("Not enough coins.");
+      alert("Not enough coins.");
     }
   };
 
@@ -56,10 +41,8 @@ export default function Store() {
       setRegenSpeed(newSpeed);
       localStorage.setItem("staminaRegenSpeed", newSpeed);
       updateCoins(80);
-      toast.success(`Regen speed now ${newSpeed / 1000}s`);
-      syncBackend({ staminaRegenSpeed: newSpeed });
     } else {
-      toast.error("Not enough coins.");
+      alert("Not enough coins.");
     }
   };
 
@@ -68,10 +51,8 @@ export default function Store() {
       setHasTapBot(true);
       localStorage.setItem("hasTapBot", "true");
       updateCoins(100);
-      toast.success("Tap Bot unlocked!");
-      syncBackend({ hasTapBot: true });
     } else {
-      toast.error(hasTapBot ? "You already own the Tap Bot!" : "Not enough coins.");
+      alert(hasTapBot ? "You already own the Tap Bot!" : "Not enough coins.");
     }
   };
 
@@ -84,7 +65,7 @@ export default function Store() {
         {/* Multiplier Upgrade */}
         <div className="bg-white/10 p-4 rounded-xl border border-yellow-500/20">
           <p className="text-lg font-bold mb-1">🔥 Tap Multiplier</p>
-          <p className="text-sm mb-2">Current: x{multiplier}</p>
+          <p className="text-sm mb-2">Current: x{tapMultiplier}</p>
           <button
             onClick={buyMultiplier}
             className="w-full py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-bold"
@@ -112,9 +93,7 @@ export default function Store() {
           <button
             onClick={buyTapBot}
             disabled={hasTapBot}
-            className={`w-full py-2 ${
-              hasTapBot ? "bg-gray-600 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"
-            } rounded-lg font-bold`}
+            className={`w-full py-2 ${hasTapBot ? "bg-gray-600 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"} rounded-lg font-bold`}
           >
             {hasTapBot ? "Already Owned" : "Buy for 100 🪙"}
           </button>
