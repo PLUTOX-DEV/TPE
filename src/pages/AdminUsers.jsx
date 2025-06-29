@@ -1,56 +1,46 @@
 import React, { useEffect, useState } from "react";
+import { fetchUsers, deleteUser } from "../api/adminApi";
+import toast from "react-hot-toast";
 
 export default function AdminUsers() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const loadUsers = async () => {
+    try {
+      const usersData = await fetchUsers();
+      setUsers(usersData);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const res = await fetch("/api/admin/users", {
-          headers: {
-            "x-admin-key": process.env.REACT_APP_ADMIN_KEY,
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (!res.ok) {
-          throw new Error(`Failed to fetch users: ${res.status} ${res.statusText}`);
-        }
-
-        const data = await res.json();
-        setUsers(data);
-      } catch (err) {
-        setError(err.message || "Failed to fetch users");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUsers();
+    loadUsers();
   }, []);
 
+  const handleDelete = async (userId) => {
+    if (!window.confirm("Are you sure you want to delete this user?")) return;
+    try {
+      await deleteUser(userId);
+      toast.success("User deleted");
+      setUsers((prev) => prev.filter((u) => u._id !== userId));
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
+
   if (loading)
-    return (
-      <p className="text-white text-center mt-10" role="status" aria-live="polite">
-        Loading users...
-      </p>
-    );
+    return <p className="text-white text-center mt-10">Loading users...</p>;
 
   if (error)
-    return (
-      <p className="text-red-500 text-center mt-10" role="alert" aria-live="assertive">
-        {error}
-      </p>
-    );
+    return <p className="text-red-500 text-center mt-10">{error}</p>;
 
   if (users.length === 0)
-    return (
-      <p className="text-yellow-400 text-center mt-10" role="status" aria-live="polite">
-        No users found.
-      </p>
-    );
+    return <p className="text-yellow-400 text-center mt-10">No users found.</p>;
 
   return (
     <div className="min-h-screen bg-black text-white p-8">
@@ -60,32 +50,40 @@ export default function AdminUsers() {
         <table className="w-full border-collapse border border-gray-700">
           <thead>
             <tr className="bg-gray-800">
-              <th className="border border-gray-600 p-3 text-left">Telegram ID</th>
-              <th className="border border-gray-600 p-3 text-left">Username</th>
-              <th className="border border-gray-600 p-3 text-left">Full Name</th>
-              <th className="border border-gray-600 p-3 text-right">Balance</th>
-              <th className="border border-gray-600 p-3 text-right">Referrals</th>
-              <th className="border border-gray-600 p-3 text-center">VIP Status</th>
+              <th className="p-3 border border-gray-700">Telegram ID</th>
+              <th className="p-3 border border-gray-700">Username</th>
+              <th className="p-3 border border-gray-700">Full Name</th>
+              <th className="p-3 border border-gray-700 text-right">Balance</th>
+              <th className="p-3 border border-gray-700 text-right">Referrals</th>
+              <th className="p-3 border border-gray-700 text-center">VIP</th>
+              <th className="p-3 border border-gray-700 text-center">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {users.map(({ _id, telegramId, username, fullName, balance, referralCount, isVIP }) => (
+            {users.map((user) => (
               <tr
-                key={_id}
-                className="hover:bg-gray-700 transition-colors duration-150"
-                tabIndex={0} // Make rows focusable for keyboard users
+                key={user._id}
+                className="hover:bg-gray-700 transition duration-150"
               >
-                <td className="border border-gray-600 p-2 break-words">{telegramId}</td>
-                <td className="border border-gray-600 p-2">{username || "—"}</td>
-                <td className="border border-gray-600 p-2">{fullName || "—"}</td>
-                <td className="border border-gray-600 p-2 text-right">{balance ?? 0}</td>
-                <td className="border border-gray-600 p-2 text-right">{referralCount ?? 0}</td>
+                <td className="p-2 border border-gray-600 break-all">{user.telegramId}</td>
+                <td className="p-2 border border-gray-600">{user.username || "—"}</td>
+                <td className="p-2 border border-gray-600">{user.fullName || "—"}</td>
+                <td className="p-2 border border-gray-600 text-right">{user.balance || 0}</td>
+                <td className="p-2 border border-gray-600 text-right">{user.referralCount || 0}</td>
                 <td
-                  className={`border border-gray-600 p-2 text-center font-semibold ${
-                    isVIP ? "text-green-400" : "text-gray-500"
+                  className={`p-2 border border-gray-600 text-center font-bold ${
+                    user.isVIP ? "text-green-400" : "text-gray-400"
                   }`}
                 >
-                  {isVIP ? "Active" : "None"}
+                  {user.isVIP ? "Yes" : "No"}
+                </td>
+                <td className="p-2 border border-gray-600 text-center">
+                  <button
+                    onClick={() => handleDelete(user._id)}
+                    className="bg-red-600 hover:bg-red-700 text-white text-sm px-3 py-1 rounded"
+                  >
+                    Delete
+                  </button>
                 </td>
               </tr>
             ))}
@@ -95,4 +93,3 @@ export default function AdminUsers() {
     </div>
   );
 }
-  
