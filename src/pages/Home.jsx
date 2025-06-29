@@ -29,7 +29,6 @@ export default function Home() {
         setHasTapBot(user.hasTapBot || false);
         setIsVIP(user.isVIP || false);
 
-        // ✅ Optional local cache (used in offline play)
         localStorage.setItem('tapCoins', user.balance || 0);
         localStorage.setItem('tapMultiplier', user.multiplier || 1);
         localStorage.setItem('staminaRegenSpeed', user.staminaRegenSpeed || 10000);
@@ -38,42 +37,31 @@ export default function Home() {
       } catch (err) {
         console.error('❌ Failed to fetch user from backend:', err);
 
-        // ⛔ Use local fallback only if backend fails
-        const localCoins = parseInt(localStorage.getItem('tapCoins')) || 0;
-        const localRegen = parseInt(localStorage.getItem('staminaRegenSpeed')) || 10000;
-        const localMult = parseInt(localStorage.getItem('tapMultiplier')) || 1;
-        const localBot = localStorage.getItem('hasTapBot') === 'true';
-
-        setCoins(localCoins);
-        setRegenSpeed(localRegen);
-        setMultiplier(localMult);
-        setHasTapBot(localBot);
+        setCoins(parseInt(localStorage.getItem('tapCoins')) || 0);
+        setRegenSpeed(parseInt(localStorage.getItem('staminaRegenSpeed')) || 10000);
+        setMultiplier(parseInt(localStorage.getItem('tapMultiplier')) || 1);
+        setHasTapBot(localStorage.getItem('hasTapBot') === 'true');
       }
     };
 
     loadUser();
   }, [telegramId]);
 
-  // 🤖 Auto Tap Bot Logic
   useEffect(() => {
     if (!hasTapBot) return;
-
     const interval = setInterval(() => {
       if (stamina > 0) handleTap(true);
     }, 3000);
-
     return () => clearInterval(interval);
   }, [stamina, hasTapBot]);
 
-  // 🧠 Tap Handler
   const handleTap = async (isBot = false) => {
     if (tapping || stamina <= 0) {
-      if (!isBot) toast.error("You're out of stamina!");
+      if (!isBot) toast.error("⚡ You're out of stamina!");
       return;
     }
 
     if (!isBot) setTapping(true);
-
     const earned = multiplier;
     const newTotal = coins + earned;
 
@@ -87,15 +75,11 @@ export default function Home() {
         return updated;
       });
 
-      // 🛰 Sync backend
       if (telegramId) {
         try {
-          await updateUser(telegramId, {
-            balance: newTotal,
-            isVIP,
-          });
+          await updateUser(telegramId, { balance: newTotal, isVIP });
         } catch (err) {
-          console.error('❌ Failed to sync with backend:', err);
+          console.error('❌ Backend sync failed:', err);
         }
       }
 
@@ -105,41 +89,42 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-[85vh] px-4 bg-gradient-to-b from-black to-gray-900 text-white">
-      <div className="bg-white/5 border border-yellow-500/10 backdrop-blur-md p-6 rounded-2xl shadow-lg text-center w-full max-w-sm">
-        <h1 className="text-3xl font-bold mb-2 tracking-wide">🚀 Tap & Earn</h1>
+    <div className="flex flex-col items-center justify-center min-h-[90vh] px-4 bg-gradient-to-b from-black via-gray-900 to-black text-white">
+      <div className="bg-white/5 border border-yellow-500/20 backdrop-blur-lg p-6 rounded-2xl shadow-xl w-full max-w-sm text-center relative">
+        <h1 className="text-3xl font-bold mb-3 tracking-wide text-yellow-300">🚀 Tap & Earn</h1>
 
-        <p className="text-yellow-400 text-xl font-semibold">
-          Balance: <span className="text-white">{coins}</span> 🪙
-        </p>
+        <div className="mb-3 text-lg">
+          <p className="text-gray-300">Balance:</p>
+          <p className="text-2xl font-bold text-yellow-400">{coins} 🪙</p>
+          <p className="text-sm text-green-400">Multiplier: ×{multiplier}</p>
+          <p className="text-sm text-blue-400">Stamina: {stamina}/{maxStamina}</p>
+        </div>
 
-        <p className="text-sm mt-1 text-green-400">Multiplier: ×{multiplier}</p>
-        <p className="text-sm text-blue-400 mb-2">Stamina: {stamina}/{maxStamina}</p>
-
-        <div className="w-full bg-gray-700 rounded-full h-3 mb-6 overflow-hidden">
+        <div className="w-full bg-gray-800 rounded-full h-3 mb-6 overflow-hidden">
           <div
-            className="bg-yellow-400 h-full"
-            style={{ width: `${(stamina / maxStamina) * 100}%`, transition: 'width 0.3s' }}
-          ></div>
+            className="bg-yellow-400 h-full transition-all duration-300"
+            style={{ width: `${(stamina / maxStamina) * 100}%` }}
+          />
         </div>
 
         <button
           onClick={() => handleTap(false)}
           disabled={tapping || stamina <= 0}
-          className={`w-40 h-40 rounded-full overflow-hidden border-4 border-yellow-400 shadow-yellow-400 shadow-lg hover:scale-105 active:scale-95 transition-transform duration-200 bg-black ${
-            tapping || stamina <= 0 ? 'opacity-50 cursor-not-allowed' : ''
+          className={`w-40 h-40 rounded-full border-4 border-yellow-400 relative transition-all duration-200 ${
+            tapping || stamina <= 0 ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105 active:scale-95 shadow-yellow-400 shadow-xl'
           }`}
         >
           <img
             src={coinImg}
             alt="Tap Coin"
-            className={`w-full h-full object-cover ${tapping ? 'animate-ping' : ''}`}
+            className={`w-full h-full object-cover rounded-full ${
+              tapping ? 'animate-pingOnce' : ''
+            }`}
           />
+          <div className="absolute inset-0 rounded-full animate-pulse bg-yellow-400/10" />
         </button>
 
-        <p className="mt-4 text-sm text-gray-400">
-          Tap the coin above to earn more!
-        </p>
+        <p className="mt-4 text-sm text-gray-400">Tap the coin to earn tokens!</p>
       </div>
     </div>
   );
