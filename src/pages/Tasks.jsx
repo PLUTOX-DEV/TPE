@@ -49,7 +49,7 @@ export default function Tasks() {
     if (isReferral) {
       const user = JSON.parse(localStorage.getItem("telegramUser"));
       const username = user?.username || "yourrefcode";
-      const referralLink = `https://t.me/Nakabozobot/SpinTPE?start=${username}`;
+      const referralLink = `https://t.me/Nakabozoz_bot/SpinTPE?start=${username}`;
 
       navigator.clipboard
         .writeText(referralLink)

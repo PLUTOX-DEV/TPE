@@ -33,7 +33,7 @@ export default function Profile() {
       .catch(err => console.error("Failed to fetch user", err));
   }, []);
 
-  const referralLink = `https://t.me/Nakabozobot/SpinTPE?start=${user?.username || "your_ref_code"}`;
+  const referralLink = `https://t.me/Nakabozoz_bot/SpinTPE?start=${user?.username || "your_ref_code"}`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(referralLink);
