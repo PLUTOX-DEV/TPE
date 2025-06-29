@@ -9,7 +9,13 @@ import { faTwitter, faTelegram } from "@fortawesome/free-brands-svg-icons";
 import toast from "react-hot-toast";
 import { getUser, updateUser } from "../api/userApi";
 
-// ✅ Tasks List with Telegram Group, Channel, and Chat Group
+// Format number to show "k" for thousands
+const formatReward = (amount) => {
+  if (amount >= 1000) return `${(amount / 1000).toFixed(0)}k`;
+  return amount;
+};
+
+// Task definitions
 const TASKS = [
   {
     id: 1,
@@ -53,7 +59,6 @@ export default function Tasks() {
   useEffect(() => {
     const fetchUser = async () => {
       if (!telegramId) return;
-
       try {
         const user = await getUser(telegramId);
         const claimed = user.claimedTasks || {};
@@ -63,7 +68,6 @@ export default function Tasks() {
         console.error("❌ Failed to fetch claimed tasks:", err);
       }
     };
-
     fetchUser();
   }, [telegramId]);
 
@@ -72,7 +76,6 @@ export default function Tasks() {
       const user = JSON.parse(localStorage.getItem("telegramUser"));
       const username = user?.username || "yourrefcode";
       const referralLink = `https://t.me/Nakabozoz_bot/SpinTPE?start=${username}`;
-
       navigator.clipboard
         .writeText(referralLink)
         .then(() => toast.success("📋 Referral link copied!"))
@@ -97,7 +100,7 @@ export default function Tasks() {
     const newBalance = current + task.reward;
     localStorage.setItem("tapCoins", newBalance);
 
-    toast.success(`+${task.reward} 🪙 Coins Claimed!`);
+    toast.success(`+${formatReward(task.reward)} 🪙 Claimed!`);
 
     if (telegramId) {
       try {
@@ -137,7 +140,9 @@ export default function Tasks() {
                   <h2 className="text-lg font-semibold">{task.action}</h2>
                   <p className="text-gray-400 text-sm">
                     Reward:{" "}
-                    <span className="text-yellow-300">{task.reward} 🪙</span>
+                    <span className="text-yellow-300">
+                      {formatReward(task.reward)} 🪙
+                    </span>
                   </p>
                 </div>
               </div>
@@ -183,7 +188,7 @@ export default function Tasks() {
                       Claimed
                     </>
                   ) : (
-                    `Claim +${task.reward}`
+                    `Claim +${formatReward(task.reward)}`
                   )}
                 </button>
               </div>
