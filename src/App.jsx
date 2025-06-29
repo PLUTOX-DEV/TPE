@@ -1,10 +1,12 @@
 import React, { useEffect, useState, Suspense, lazy } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 
 import BottomNav from "./components/BottomNav";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { loginUser } from "./api/userApi";
+
+import AdminUsers from "./pages/AdminUsers";
 
 // Lazy-loaded pages
 const Home = lazy(() => import("./pages/Home"));
@@ -15,9 +17,6 @@ const Store = lazy(() => import("./pages/Store"));
 const DailyReward = lazy(() => import("./pages/DailyReward"));
 const Leaderboard = lazy(() => import("./pages/Leaderboard"));
 
-// Import AdminUsers (not lazy loaded so it loads immediately)
-import AdminUsers from "./pages/AdminUsers";
-
 const Loading = () => (
   <div className="flex justify-center items-center h-screen bg-black text-white text-xl">
     <div className="animate-spin border-4 border-white border-t-transparent rounded-full w-12 h-12 mr-3"></div>
@@ -26,7 +25,9 @@ const Loading = () => (
 );
 
 export default function App() {
-  // ... your existing state and useEffect
+  const location = useLocation();
+
+  const hideBottomNav = location.pathname.startsWith("/admin");
 
   return (
     <div className="bg-black text-white min-h-screen">
@@ -47,7 +48,9 @@ export default function App() {
 
       <Analytics />
       <SpeedInsights />
-      <BottomNav />
+
+      {/* Conditionally render BottomNav except on admin routes */}
+      {!hideBottomNav && <BottomNav />}
     </div>
   );
 }

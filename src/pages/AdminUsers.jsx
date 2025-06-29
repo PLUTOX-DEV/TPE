@@ -1,114 +1,144 @@
 import React, { useEffect, useState } from "react";
-import { fetchUsers, deleteUser } from "../api/adminApi.jsx";
+import { fetchUsers, deleteUser, updateUser } from "../api/adminApi";
+import toast from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faUser,
-  faCoins,
-  faUserFriends,
-  faCheckCircle,
-  faTimesCircle,
   faTrash,
+  faCrown,
+  faTimes,
+  faEye,
+  faSave,
+  faDownload,
 } from "@fortawesome/free-solid-svg-icons";
-import toast from "react-hot-toast";
+
+// ✅ CSV Export Helper
+const exportToCSV = (users) => {
+  const headers = ["Telegram ID", "Username", "Full Name", "Balance", "VIP"];
+  const rows = users.map((u) => [
+    u.telegramId,
+    u.username || "—",
+    u.fullName || "—",
+    u.balance ?? 0,
+    u.isVIP ? "Yes" : "No",
+  ]);
+  const csvContent = [headers, ...rows].map((r) => r.join(",")).join("\n");
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "users.csv";
+  link.click();
+};
 
 export default function AdminUsers() {
   const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  const loadUsers = async () => {
-    try {
-      const usersData = await fetchUsers();
-      setUsers(usersData);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [editBalance, setEditBalance] = useState(0);
+  const [editIsVIP, setEditIsVIP] = useState(false);
+  const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
-    loadUsers();
+    fetchUsers()
+      .then(setUsers)
+      .catch((err) => toast.error(err.message));
   }, []);
 
-  const handleDelete = async (userId) => {
-    if (!window.confirm("Are you sure you want to delete this user?")) return;
+  const handleDelete = async (id) => {
+    if (!window.confirm("Delete this user?")) return;
     try {
-      await deleteUser(userId);
+      await deleteUser(id);
       toast.success("User deleted");
-      setUsers((prev) => prev.filter((u) => u._id !== userId));
+      setUsers(users.filter((u) => u._id !== id));
     } catch (err) {
       toast.error(err.message);
     }
   };
 
-  if (loading)
-    return (
-      <div className="flex justify-center items-center h-screen bg-black">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
-      </div>
-    );
+  const openModal = (user) => {
+    setSelectedUser(user);
+    setEditBalance(user.balance ?? 0);
+    setEditIsVIP(user.isVIP ?? false);
+    setShowModal(true);
+  };
 
-  if (error)
-    return <p className="text-red-500 text-center mt-10">{error}</p>;
+  const closeModal = () => {
+    setSelectedUser(null);
+    setShowModal(false);
+  };
+
+  const handleSave = async () => {
+    if (!selectedUser) return;
+    setUpdating(true);
+    try {
+      const updatedUser = await updateUser(selectedUser._id, {
+        balance: Number(editBalance),
+        isVIP: editIsVIP,
+      });
+      toast.success("User updated");
+      setUsers((prev) =>
+        prev.map((u) => (u._id === updatedUser._id ? updatedUser : u))
+      );
+      setSelectedUser(updatedUser);
+    } catch (err) {
+      toast.error("Failed to update: " + err.message);
+    } finally {
+      setUpdating(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black to-gray-900 text-white p-6">
-      <h1 className="text-4xl font-bold text-center mb-8">
-        🛠️ Admin Dashboard
-      </h1>
+    <div className="bg-black text-white min-h-screen p-4 md:p-10">
+      {/* Header and Export */}
+      <div className="flex justify-between items-center flex-wrap mb-6 gap-4">
+        <h1 className="text-2xl md:text-3xl font-bold text-center">
+          Admin Dashboard - Users
+        </h1>
+        <button
+          onClick={() => exportToCSV(users)}
+          className="bg-blue-600 hover:bg-blue-700 px-4 py-2 text-white text-sm rounded"
+        >
+          <FontAwesomeIcon icon={faDownload} className="mr-2" />
+          Export CSV
+        </button>
+      </div>
 
-      <div className="overflow-x-auto bg-white/5 p-4 rounded-xl shadow-lg border border-gray-800">
-        <table className="w-full table-auto text-sm text-white">
-          <thead className="bg-gray-800 sticky top-0 z-10">
+      {/* Table */}
+      <div className="overflow-x-auto border border-gray-700 rounded-lg">
+        <table className="w-full table-auto text-sm">
+          <thead className="bg-gray-900 text-gray-300">
             <tr>
-              <th className="p-3 border-b border-gray-700">
-                <FontAwesomeIcon icon={faUser} /> Telegram ID
-              </th>
-              <th className="p-3 border-b border-gray-700">Username</th>
-              <th className="p-3 border-b border-gray-700">Full Name</th>
-              <th className="p-3 border-b border-gray-700 text-right">
-                <FontAwesomeIcon icon={faCoins} /> Balance
-              </th>
-              <th className="p-3 border-b border-gray-700 text-right">
-                <FontAwesomeIcon icon={faUserFriends} /> Referrals
-              </th>
-              <th className="p-3 border-b border-gray-700 text-center">VIP</th>
-              <th className="p-3 border-b border-gray-700 text-center">Actions</th>
+              <th className="p-3 text-left">Telegram ID</th>
+              <th className="p-3 text-left">Username</th>
+              <th className="p-3 text-left">Balance</th>
+              <th className="p-3 text-center">VIP</th>
+              <th className="p-3 text-center">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {users.map((user) => (
+            {users.map((u) => (
               <tr
-                key={user._id}
-                className="hover:bg-gray-700 transition duration-150"
+                key={u._id}
+                className="hover:bg-gray-800 transition cursor-pointer"
+                onClick={() => openModal(u)}
               >
-                <td className="p-2 border border-gray-700 break-all">
-                  {user.telegramId}
-                </td>
-                <td className="p-2 border border-gray-700">{user.username || "—"}</td>
-                <td className="p-2 border border-gray-700">{user.fullName || "—"}</td>
-                <td className="p-2 border border-gray-700 text-right">
-                  {user.balance || 0}
-                </td>
-                <td className="p-2 border border-gray-700 text-right">
-                  {user.referralCount || 0}
-                </td>
-                <td className="p-2 border border-gray-700 text-center">
-                  {user.isVIP ? (
-                    <span className="text-green-400 font-bold">
-                      <FontAwesomeIcon icon={faCheckCircle} /> Active
-                    </span>
+                <td className="p-2">{u.telegramId}</td>
+                <td className="p-2">{u.username || "—"}</td>
+                <td className="p-2">{u.balance ?? 0}</td>
+                <td className="p-2 text-center">
+                  {u.isVIP ? (
+                    <FontAwesomeIcon icon={faCrown} className="text-yellow-400" />
                   ) : (
-                    <span className="text-gray-400">
-                      <FontAwesomeIcon icon={faTimesCircle} /> None
-                    </span>
+                    "—"
                   )}
                 </td>
-                <td className="p-2 border border-gray-700 text-center">
+                <td className="p-2 text-center">
                   <button
-                    onClick={() => handleDelete(user._id)}
-                    className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded shadow text-xs"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(u._id);
+                    }}
+                    className="bg-red-600 hover:bg-red-700 text-xs px-3 py-1 rounded"
                   >
                     <FontAwesomeIcon icon={faTrash} /> Delete
                   </button>
@@ -118,6 +148,71 @@ export default function AdminUsers() {
           </tbody>
         </table>
       </div>
+
+      {/* Modal */}
+      {showModal && selectedUser && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 max-w-md w-full text-white relative shadow-xl">
+            <button
+              onClick={closeModal}
+              className="absolute top-2 right-2 text-gray-400 hover:text-white"
+              aria-label="Close modal"
+            >
+              <FontAwesomeIcon icon={faTimes} />
+            </button>
+
+            <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+              <FontAwesomeIcon icon={faEye} />
+              User Info
+            </h2>
+
+            <div className="space-y-4 text-sm">
+              <p>
+                <strong>Telegram ID:</strong> {selectedUser.telegramId}
+              </p>
+              <p>
+                <strong>Username:</strong> {selectedUser.username || "—"}
+              </p>
+              <p>
+                <strong>Full Name:</strong> {selectedUser.fullName || "—"}
+              </p>
+
+              <div>
+                <label className="block mb-1 font-semibold">Balance</label>
+                <input
+                  type="number"
+                  className="w-full rounded bg-gray-800 border border-gray-600 p-2 text-white"
+                  value={editBalance}
+                  onChange={(e) => setEditBalance(e.target.value)}
+                  min={0}
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="vipCheckbox"
+                  checked={editIsVIP}
+                  onChange={(e) => setEditIsVIP(e.target.checked)}
+                  className="w-5 h-5 text-yellow-400 focus:ring-yellow-400 border-gray-600 rounded"
+                />
+                <label htmlFor="vipCheckbox" className="font-semibold">
+                  VIP Status
+                </label>
+              </div>
+
+              <button
+                onClick={handleSave}
+                disabled={updating}
+                className="mt-4 w-full flex justify-center items-center gap-2 bg-green-600 hover:bg-green-700 rounded py-2 font-semibold transition disabled:opacity-50"
+              >
+                <FontAwesomeIcon icon={faSave} />
+                {updating ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
