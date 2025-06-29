@@ -36,9 +36,9 @@ const PACKAGE_SPINS = {
 };
 
 const PACKAGES = {
-  bronze: { label: "Bronze", priceTON: "0.02", spins: 3 },
-  silver: { label: "Silver", priceTON: "0.035", spins: 5 },
-  gold: { label: "Gold", priceTON: "0.05", spins: 7 },
+  bronze: { label: "Bronze", priceTON: "6.97", spins: 3 },
+  silver: { label: "Silver", priceTON: "12.16", spins: 5 },
+  gold: { label: "Gold", priceTON: "17.43", spins: 7 },
 };
 
 export default function Spin() {

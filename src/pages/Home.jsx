@@ -47,6 +47,17 @@ export default function Home() {
     loadUser();
   }, [telegramId]);
 
+  // ✅ Show welcome message once
+  useEffect(() => {
+    const isFirstVisit = localStorage.getItem("isNewUser");
+    if (!isFirstVisit) {
+      toast.success("👋 Welcome to Nakabozoz Tap & Earn!", {
+        duration: 5000,
+      });
+      localStorage.setItem("isNewUser", "false");
+    }
+  }, []);
+
   useEffect(() => {
     if (!hasTapBot) return;
     const interval = setInterval(() => {

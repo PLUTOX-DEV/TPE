@@ -8,7 +8,7 @@ import {
 import { faTwitter, faTelegram } from "@fortawesome/free-brands-svg-icons";
 import toast from "react-hot-toast";
 
-// Tasks definition
+// ✅ Tasks List with Telegram Group, Channel, and Chat Group
 const TASKS = [
   {
     id: 1,
@@ -26,10 +26,24 @@ const TASKS = [
   },
   {
     id: 3,
+    action: "Join Telegram Channel",
+    reward: 5,
+    icon: faTelegram,
+    link: "https://t.me/nakabozozanounce",
+  },
+  {
+    id: 4,
+    action: "Join Telegram Chat Group",
+    reward: 5,
+    icon: faTelegram,
+    link: "https://t.me/+4pBxOFMdzbFhYTY0",
+  },
+  {
+    id: 5,
     action: "Refer a Friend",
     reward: 20,
     icon: faUserFriends,
-    isReferral: true, // ✅ Flag for referral
+    isReferral: true,
   },
 ];
 
@@ -44,7 +58,6 @@ export default function Tasks() {
     return saved ? JSON.parse(saved) : {};
   });
 
-  // Handle Visit or Referral Copy
   const handleVisit = (taskId, link, isReferral = false) => {
     if (isReferral) {
       const user = JSON.parse(localStorage.getItem("telegramUser"));
@@ -64,7 +77,6 @@ export default function Tasks() {
     localStorage.setItem("visitedTasks", JSON.stringify(updated));
   };
 
-  // Claim reward after task visit
   const handleClaim = (task) => {
     if (!visitedTasks[task.id] || claimedTasks[task.id]) return;
 
@@ -84,7 +96,7 @@ export default function Tasks() {
         📋 Tasks & Rewards
       </h1>
 
-      <div className="space-y-5">
+      <div className="space-y-5 max-w-3xl mx-auto">
         {TASKS.map((task) => {
           const isVisited = visitedTasks[task.id];
           const isClaimed = claimedTasks[task.id];
@@ -112,7 +124,9 @@ export default function Tasks() {
               {/* Right Section */}
               <div className="flex gap-3">
                 <button
-                  onClick={() => handleVisit(task.id, task.link, task.isReferral)}
+                  onClick={() =>
+                    handleVisit(task.id, task.link, task.isReferral)
+                  }
                   disabled={isVisited}
                   className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all flex items-center gap-2 ${
                     isVisited

@@ -1,14 +1,13 @@
-import React, { useEffect, useState, Suspense, lazy } from "react";
+import React, { Suspense, lazy } from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
-
 import BottomNav from "./components/BottomNav";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
-import { loginUser } from "./api/userApi";
 
+// Directly import Admin panel (don't lazy load)
 import AdminUsers from "./pages/AdminUsers";
 
-// Lazy-loaded pages
+// Lazy-loaded user-facing pages
 const Home = lazy(() => import("./pages/Home"));
 const Spin = lazy(() => import("./pages/Spin"));
 const Tasks = lazy(() => import("./pages/Tasks"));
@@ -26,13 +25,13 @@ const Loading = () => (
 
 export default function App() {
   const location = useLocation();
-
   const hideBottomNav = location.pathname.startsWith("/admin");
 
   return (
     <div className="bg-black text-white min-h-screen">
       <Suspense fallback={<Loading />}>
         <Routes>
+          {/* User-facing pages */}
           <Route path="/" element={<Home />} />
           <Route path="/spin" element={<Spin />} />
           <Route path="/tasks" element={<Tasks />} />
@@ -41,15 +40,16 @@ export default function App() {
           <Route path="/daily-reward" element={<DailyReward />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
 
-          {/* Admin route */}
+          {/* Admin dashboard */}
           <Route path="/admin" element={<AdminUsers />} />
         </Routes>
       </Suspense>
 
+      {/* Insights */}
       <Analytics />
       <SpeedInsights />
 
-      {/* Conditionally render BottomNav except on admin routes */}
+      {/* Navigation bar (hidden on admin page) */}
       {!hideBottomNav && <BottomNav />}
     </div>
   );
