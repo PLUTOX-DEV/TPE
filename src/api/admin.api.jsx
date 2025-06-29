@@ -1,47 +1,56 @@
-const BASE_URL = "https://nakabozoz.onrender.com/api/admin";
-const ADMIN_KEY = process.env.REACT_APP_ADMIN_KEY;
+const BASE_URL = "https://nakabozoz.onrender.com/api/admin"; // Your backend admin base URL
+const ADMIN_KEY = process.env.REACT_APP_ADMIN_KEY; // Set this in your .env file
 
-// Helper to build fetch options
-const getFetchOptions = (method = "GET", body = null) => {
-  const headers = {
-    "Content-Type": "application/json",
-    "x-admin-key": ADMIN_KEY,
-  };
+// 🔐 Common headers with admin key
+const getHeaders = () => ({
+  "Content-Type": "application/json",
+  "x-admin-key": ADMIN_KEY,
+});
 
-  const options = { method, headers };
-  if (body) options.body = JSON.stringify(body);
-  return options;
+// 🌐 Helper to handle fetch + standard error checks
+const handleRequest = async (url, options = {}) => {
+  try {
+    const res = await fetch(url, { ...options, headers: getHeaders() });
+
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      const message = data.message || "Unknown error";
+      throw new Error(message);
+    }
+
+    return data;
+  } catch (err) {
+    console.error("❌ API Request Failed:", err.message);
+    throw err;
+  }
 };
 
-// Fetch all users
+// ✅ Get all users
 export async function fetchUsers() {
-  const res = await fetch(`${BASE_URL}/users`, getFetchOptions());
-  const data = await res.json();
-  if (!res.ok || !data.success) throw new Error(data.message || "Failed to fetch users");
+  const data = await handleRequest(`${BASE_URL}/users`);
   return data.users;
 }
 
-// Fetch a user by ID
-export async function fetchUserById(id) {
-  const res = await fetch(`${BASE_URL}/users/${id}`, getFetchOptions());
-  const data = await res.json();
-  if (!res.ok || !data.success) throw new Error(data.message || "Failed to fetch user");
+// ✅ Get single user
+export async function fetchUserById(userId) {
+  const data = await handleRequest(`${BASE_URL}/users/${userId}`);
   return data.user;
 }
 
-// Update user
-export async function updateUser(id, updates) {
-  const res = await fetch(`${BASE_URL}/users/${id}`, getFetchOptions("PUT", updates));
-  const data = await res.json();
-  if (!res.ok || !data.success) throw new Error(data.message || "Failed to update user");
+// ✅ Update user
+export async function updateUser(userId, updates) {
+  const data = await handleRequest(`${BASE_URL}/users/${userId}`, {
+    method: "PUT",
+    body: JSON.stringify(updates),
+  });
   return data.user;
 }
 
-// Delete user
-export async function deleteUser(id) {
-  const res = await fetch(`${BASE_URL}/users/${id}`, getFetchOptions("DELETE"));
-  const data = await res.json();
-  if (!res.ok || !data.success) throw new Error(data.message || "Failed to delete user");
+// ✅ Delete user
+export async function deleteUser(userId) {
+  const data = await handleRequest(`${BASE_URL}/users/${userId}`, {
+    method: "DELETE",
+  });
   return data.message;
 }
-console.log("Admin Key:", ADMIN_KEY); // 👈 Check this shows the correct key
