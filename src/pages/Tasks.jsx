@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faUserFriends,
@@ -7,6 +7,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { faTwitter, faTelegram } from "@fortawesome/free-brands-svg-icons";
 import toast from "react-hot-toast";
+import { getUser, updateUser } from "../api/userApi";
 
 // ✅ Tasks List with Telegram Group, Channel, and Chat Group
 const TASKS = [
@@ -16,13 +17,6 @@ const TASKS = [
     reward: 10,
     icon: faTwitter,
     link: "https://x.com/Nakabozoz_base?t=OH7zyvR1Yu12kReFRCKqdg&s=09",
-  },
-  {
-    id: 2,
-    action: "Join Telegram Group",
-    reward: 8,
-    icon: faTelegram,
-    link: "https://t.me/yourprojectgroup",
   },
   {
     id: 3,
@@ -53,10 +47,25 @@ export default function Tasks() {
     return saved ? JSON.parse(saved) : {};
   });
 
-  const [claimedTasks, setClaimedTasks] = useState(() => {
-    const saved = localStorage.getItem("claimedTasks");
-    return saved ? JSON.parse(saved) : {};
-  });
+  const [claimedTasks, setClaimedTasks] = useState({});
+  const telegramId = localStorage.getItem("telegramId");
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      if (!telegramId) return;
+
+      try {
+        const user = await getUser(telegramId);
+        const claimed = user.claimedTasks || {};
+        setClaimedTasks(claimed);
+        localStorage.setItem("claimedTasks", JSON.stringify(claimed));
+      } catch (err) {
+        console.error("❌ Failed to fetch claimed tasks:", err);
+      }
+    };
+
+    fetchUser();
+  }, [telegramId]);
 
   const handleVisit = (taskId, link, isReferral = false) => {
     if (isReferral) {
@@ -77,7 +86,7 @@ export default function Tasks() {
     localStorage.setItem("visitedTasks", JSON.stringify(updated));
   };
 
-  const handleClaim = (task) => {
+  const handleClaim = async (task) => {
     if (!visitedTasks[task.id] || claimedTasks[task.id]) return;
 
     const updated = { ...claimedTasks, [task.id]: true };
@@ -85,9 +94,21 @@ export default function Tasks() {
     localStorage.setItem("claimedTasks", JSON.stringify(updated));
 
     const current = parseInt(localStorage.getItem("tapCoins")) || 0;
-    localStorage.setItem("tapCoins", current + task.reward);
+    const newBalance = current + task.reward;
+    localStorage.setItem("tapCoins", newBalance);
 
     toast.success(`+${task.reward} 🪙 Coins Claimed!`);
+
+    if (telegramId) {
+      try {
+        await updateUser(telegramId, {
+          claimedTasks: updated,
+          balance: newBalance,
+        });
+      } catch (err) {
+        console.error("❌ Failed to sync task to backend:", err);
+      }
+    }
   };
 
   return (
