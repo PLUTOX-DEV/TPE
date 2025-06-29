@@ -1,5 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { fetchUsers, deleteUser } from "../api/adminApi.jsx";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faUser,
+  faCoins,
+  faUserFriends,
+  faCheckCircle,
+  faTimesCircle,
+  faTrash,
+} from "@fortawesome/free-solid-svg-icons";
 import toast from "react-hot-toast";
 
 export default function AdminUsers() {
@@ -34,29 +43,38 @@ export default function AdminUsers() {
   };
 
   if (loading)
-    return <p className="text-white text-center mt-10">Loading users...</p>;
+    return (
+      <div className="flex justify-center items-center h-screen bg-black">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+      </div>
+    );
 
   if (error)
     return <p className="text-red-500 text-center mt-10">{error}</p>;
 
-  if (users.length === 0)
-    return <p className="text-yellow-400 text-center mt-10">No users found.</p>;
-
   return (
-    <div className="min-h-screen bg-black text-white p-8">
-      <h1 className="text-3xl font-bold mb-6 text-center">Admin Dashboard - Users</h1>
+    <div className="min-h-screen bg-gradient-to-br from-black to-gray-900 text-white p-6">
+      <h1 className="text-4xl font-bold text-center mb-8">
+        🛠️ Admin Dashboard
+      </h1>
 
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse border border-gray-700">
-          <thead>
-            <tr className="bg-gray-800">
-              <th className="p-3 border border-gray-700">Telegram ID</th>
-              <th className="p-3 border border-gray-700">Username</th>
-              <th className="p-3 border border-gray-700">Full Name</th>
-              <th className="p-3 border border-gray-700 text-right">Balance</th>
-              <th className="p-3 border border-gray-700 text-right">Referrals</th>
-              <th className="p-3 border border-gray-700 text-center">VIP</th>
-              <th className="p-3 border border-gray-700 text-center">Actions</th>
+      <div className="overflow-x-auto bg-white/5 p-4 rounded-xl shadow-lg border border-gray-800">
+        <table className="w-full table-auto text-sm text-white">
+          <thead className="bg-gray-800 sticky top-0 z-10">
+            <tr>
+              <th className="p-3 border-b border-gray-700">
+                <FontAwesomeIcon icon={faUser} /> Telegram ID
+              </th>
+              <th className="p-3 border-b border-gray-700">Username</th>
+              <th className="p-3 border-b border-gray-700">Full Name</th>
+              <th className="p-3 border-b border-gray-700 text-right">
+                <FontAwesomeIcon icon={faCoins} /> Balance
+              </th>
+              <th className="p-3 border-b border-gray-700 text-right">
+                <FontAwesomeIcon icon={faUserFriends} /> Referrals
+              </th>
+              <th className="p-3 border-b border-gray-700 text-center">VIP</th>
+              <th className="p-3 border-b border-gray-700 text-center">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -65,24 +83,34 @@ export default function AdminUsers() {
                 key={user._id}
                 className="hover:bg-gray-700 transition duration-150"
               >
-                <td className="p-2 border border-gray-600 break-all">{user.telegramId}</td>
-                <td className="p-2 border border-gray-600">{user.username || "—"}</td>
-                <td className="p-2 border border-gray-600">{user.fullName || "—"}</td>
-                <td className="p-2 border border-gray-600 text-right">{user.balance || 0}</td>
-                <td className="p-2 border border-gray-600 text-right">{user.referralCount || 0}</td>
-                <td
-                  className={`p-2 border border-gray-600 text-center font-bold ${
-                    user.isVIP ? "text-green-400" : "text-gray-400"
-                  }`}
-                >
-                  {user.isVIP ? "Yes" : "No"}
+                <td className="p-2 border border-gray-700 break-all">
+                  {user.telegramId}
                 </td>
-                <td className="p-2 border border-gray-600 text-center">
+                <td className="p-2 border border-gray-700">{user.username || "—"}</td>
+                <td className="p-2 border border-gray-700">{user.fullName || "—"}</td>
+                <td className="p-2 border border-gray-700 text-right">
+                  {user.balance || 0}
+                </td>
+                <td className="p-2 border border-gray-700 text-right">
+                  {user.referralCount || 0}
+                </td>
+                <td className="p-2 border border-gray-700 text-center">
+                  {user.isVIP ? (
+                    <span className="text-green-400 font-bold">
+                      <FontAwesomeIcon icon={faCheckCircle} /> Active
+                    </span>
+                  ) : (
+                    <span className="text-gray-400">
+                      <FontAwesomeIcon icon={faTimesCircle} /> None
+                    </span>
+                  )}
+                </td>
+                <td className="p-2 border border-gray-700 text-center">
                   <button
                     onClick={() => handleDelete(user._id)}
-                    className="bg-red-600 hover:bg-red-700 text-white text-sm px-3 py-1 rounded"
+                    className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded shadow text-xs"
                   >
-                    Delete
+                    <FontAwesomeIcon icon={faTrash} /> Delete
                   </button>
                 </td>
               </tr>
