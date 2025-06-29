@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { fetchUsers, deleteUser } from "../api/adminapi";
+import { fetchUsers, deleteUser } from "../api/adminApi.jsx";
 import toast from "react-hot-toast";
 
 export default function AdminUsers() {
