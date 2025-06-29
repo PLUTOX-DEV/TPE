@@ -44,3 +44,4 @@ export async function deleteUser(id) {
   if (!res.ok || !data.success) throw new Error(data.message || "Failed to delete user");
   return data.message;
 }
+console.log("Admin Key:", ADMIN_KEY); // 👈 Check this shows the correct key
