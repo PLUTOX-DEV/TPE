@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useState, useCallback } from "react";
 import coinImg from "../assets/image.jpg";
 import { StaminaContext } from "../context/StaminaContext";
 import { UserContext } from "../context/UserContext";
@@ -24,7 +24,7 @@ export default function Home() {
   const telegramId = localStorage.getItem("telegramId");
 
   // Fetch fresh user data and sync state + localStorage
-  const fetchUserData = async () => {
+  const fetchUserData = useCallback(async () => {
     if (!telegramId) return;
     try {
       setLoadingUser(true);
@@ -37,11 +37,11 @@ export default function Home() {
     } finally {
       setLoadingUser(false);
     }
-  };
+  }, [telegramId, setLoadingUser, setUser]);
 
   useEffect(() => {
     fetchUserData();
-  }, []);
+  }, [fetchUserData]);
 
   // Sync coins state if user.balance changes externally
   useEffect(() => {
@@ -50,7 +50,7 @@ export default function Home() {
     }
   }, [user]);
 
-  // First time welcome
+  // First time welcome toast
   useEffect(() => {
     const isNew = localStorage.getItem("isNewUser");
     if (!isNew) {
@@ -62,46 +62,57 @@ export default function Home() {
   // Auto tap bot: tap every 3 seconds if stamina available
   useEffect(() => {
     if (!hasTapBot || loadingUser) return;
+
     const interval = setInterval(() => {
-      if (stamina > 0) handleTap(true);
+      if (stamina > 0) {
+        handleTap(true).catch(console.error);
+      }
     }, 3000);
+
     return () => clearInterval(interval);
   }, [stamina, hasTapBot, loadingUser]);
 
-  const handleTap = async (isBot = false) => {
-    if (tapping || stamina <= 0 || loadingUser) {
-      if (!isBot) toast.error("⚡ You're out of stamina!");
-      return;
-    }
+  // Tap handler function (manual or bot)
+  const handleTap = useCallback(
+    async (isBot = false) => {
+      if (tapping || stamina <= 0 || loadingUser) {
+        if (!isBot) toast.error("⚡ You're out of stamina!");
+        return;
+      }
 
-    if (!isBot) setTapping(true);
-    const earned = multiplier;
-    const newTotal = coins + earned;
+      if (!isBot) setTapping(true);
 
-    setTimeout(async () => {
-      setCoins(newTotal);
-      setStamina((prev) => {
-        const updated = Math.max(0, prev - 1);
-        localStorage.setItem("stamina", updated);
-        return updated;
-      });
+      const earned = multiplier;
+      const newTotal = coins + earned;
 
-      if (telegramId) {
-        try {
-          await updateUser(telegramId, { balance: newTotal, isVIP });
-          // Fetch fresh user data after update for sync
-          await fetchUserData();
-        } catch (err) {
-          console.error("Failed to sync:", err);
+      // Use a small delay for animation effect
+      setTimeout(async () => {
+        setCoins(newTotal);
+        setStamina((prev) => {
+          const updated = Math.max(0, prev - 1);
+          localStorage.setItem("stamina", updated);
+          return updated;
+        });
+
+        if (telegramId) {
+          try {
+            // Update backend user balance and VIP status
+            await updateUser(telegramId, { balance: newTotal, isVIP });
+            // Fetch fresh user data to keep UI in sync with backend
+            await fetchUserData();
+          } catch (err) {
+            console.error("Failed to sync balance:", err);
+          }
         }
-      }
 
-      if (!isBot) {
-        toast.success(`+${earned} 🪙`);
-        setTapping(false);
-      }
-    }, 200);
-  };
+        if (!isBot) {
+          toast.success(`+${earned} 🪙`);
+          setTapping(false);
+        }
+      }, 200);
+    },
+    [coins, stamina, tapping, loadingUser, multiplier, telegramId, isVIP, fetchUserData, setStamina]
+  );
 
   if (loadingUser) {
     return (
