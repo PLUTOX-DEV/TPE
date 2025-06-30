@@ -1,25 +1,19 @@
 import React, { useState, useEffect } from "react";
-import { Wheel } from "react-custom-roulette";
 import toast from "react-hot-toast";
 import { useTonConnectUI, TonConnectButton } from "@tonconnect/ui-react";
+import { Wheel } from "react-custom-roulette";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faCoins,
-  faStar,
-  faGem,
-  faCheckCircle,
-  faCircleXmark,
-  faWallet,
-  faClock,
-  faSpinner,
-  faMedal,
-  faRepeat,
+  faCoins, faStar, faGem, faWallet,
+  faClock, faSpinner, faMedal,
+  faRepeat, faCheckCircle, faCircleXmark
 } from "@fortawesome/free-solid-svg-icons";
 import { updateUser } from "../api/userApi";
+import { Address } from "@ton/core"; // ✅ new
 
 const formatCoins = (num) => {
-  if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + "M";
-  if (num >= 1_000) return (num / 1_000).toFixed(1) + "k";
+  if (num >= 1e6) return (num / 1e6).toFixed(1) + "M";
+  if (num >= 1e3) return (num / 1e3).toFixed(1) + "k";
   return num.toString();
 };
 
@@ -31,22 +25,15 @@ const data = [
   { option: "ZERO", style: { backgroundColor: "#facc15", textColor: "#000" } },
   { option: "+10000", style: { backgroundColor: "#f472b6", textColor: "white" } },
   { option: "+15", style: { backgroundColor: "#34d399", textColor: "white" } },
-  { option: "+5", style: { backgroundColor: "#60a5fa", textColor: "white" } },
+  { option: "+5", style: { backgroundColor: "#60a5fa", textColor: "white" } }
 ];
 
-const PACKAGE_SPINS = {
-  free: 1,
-  bronze: 3,
-  silver: 5,
-  gold: 7,
-};
-
+const PACKAGE_SPINS = { free: 1, bronze: 3, silver: 5, gold: 7 };
 const PACKAGES = {
   bronze: { label: "Bronze", priceTON: "10", spins: 4 },
   silver: { label: "Silver", priceTON: "25", spins: 10 },
-  gold: { label: "Gold", priceTON: "40", spins: 20 },
+  gold: { label: "Gold", priceTON: "40", spins: 20 }
 };
-
 const SIX_MONTHS_MS = 1000 * 60 * 60 * 24 * 30 * 6;
 
 export default function Spin() {
@@ -62,34 +49,32 @@ export default function Spin() {
   const todayStr = () => new Date().toISOString().split("T")[0];
 
   useEffect(() => {
-    const savedTapBalance = parseInt(localStorage.getItem("tapCoins")) || 0;
-    setBalance(savedTapBalance);
+    const savedBal = parseInt(localStorage.getItem("tapCoins")) || 0;
+    setBalance(savedBal);
 
-    const savedPackage = localStorage.getItem("packageType") || "free";
-    const savedSpinsUsed = parseInt(localStorage.getItem("spinsUsed")) || 0;
-    const savedSpinsDate = localStorage.getItem("spinsDate");
-    const savedExpiry = localStorage.getItem("packageExpiresAt");
+    const pkg = localStorage.getItem("packageType") || "free";
+    const used = parseInt(localStorage.getItem("spinsUsed")) || 0;
+    const lastDay = localStorage.getItem("spinsDate");
+    const expiry = localStorage.getItem("packageExpiresAt");
 
-    if (savedPackage !== "free" && savedExpiry && Date.now() > parseInt(savedExpiry)) {
+    if (pkg !== "free" && expiry && Date.now() > +expiry) {
+      toast("🎫 Premium package expired, reverting to free.");
       setPackageType("free");
       localStorage.setItem("packageType", "free");
       localStorage.removeItem("packageExpiresAt");
-      toast("🎫 Your premium package has expired.");
     } else {
-      setPackageType(savedPackage);
+      setPackageType(pkg);
     }
 
-    if (savedSpinsDate !== todayStr()) {
+    if (lastDay !== todayStr()) {
       setSpinsUsed(0);
       localStorage.setItem("spinsUsed", "0");
       localStorage.setItem("spinsDate", todayStr());
-    } else {
-      setSpinsUsed(savedSpinsUsed);
-    }
+    } else setSpinsUsed(used);
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("tapCoins", balance);
+    localStorage.setItem("tapCoins", balance.toString());
   }, [balance]);
 
   const incrementSpinUsed = () => {
@@ -100,153 +85,129 @@ export default function Spin() {
   };
 
   const handleSpinClick = () => {
-    const maxSpins = PACKAGE_SPINS[packageType] || 1;
-    if (spinsUsed >= maxSpins) {
+    const limit = PACKAGE_SPINS[packageType] || 1;
+    if (spinsUsed >= limit) {
       toast.error(
         <>
           <FontAwesomeIcon icon={faClock} className="mr-2" />
           {packageType === "free"
-            ? "Free users get 1 spin per day. Get Premium for more spins."
-            : `You've used all your ${maxSpins} spins today.`}
+            ? "Free: 1 spin/day. Upgrade for more!"
+            : `You've used all ${limit} spins.`}
         </>
       );
       return;
     }
 
-    const randomIndex = Math.floor(Math.random() * data.length);
-    setPrizeNumber(randomIndex);
+    const idx = Math.floor(Math.random() * data.length);
+    setPrizeNumber(idx);
     setMustSpin(true);
     setResult(null);
     incrementSpinUsed();
   };
 
   const handleReward = async (rewardText) => {
-    const rewardAmount = parseInt(rewardText.replace(/\D/g, "")) || 0;
-    const newBalance = balance + rewardAmount;
-    setBalance(newBalance);
-    localStorage.setItem("tapCoins", newBalance);
+    const amount = parseInt(rewardText.replace(/\D/g, "")) || 0;
+    const newBal = balance + amount;
+    setBalance(newBal);
 
-    const telegramId = localStorage.getItem("telegramId");
-    if (telegramId) {
-      try {
-        await updateUser(telegramId, { balance: newBalance });
-      } catch (err) {
-        console.error("Spin reward sync failed:", err);
-      }
-    }
+    const id = localStorage.getItem("telegramId");
+    if (id) await updateUser(id, { balance: newBal });
 
     toast.success(
-      <>
-        <FontAwesomeIcon icon={faCoins} className="mr-2" />
-        +{formatCoins(rewardAmount)} Coins added!
-      </>
+      <><FontAwesomeIcon icon={faCoins} className="mr-2" />+{formatCoins(amount)} Coins!</>
     );
   };
 
   const handleBuyPackage = async (pack) => {
     if (!tonConnectUI.connected) {
-      toast.error("Please connect your TON wallet first!");
-      return;
+      return toast.error("Connect your TON wallet!");
     }
 
-    const isUpgrade =
-      Object.keys(PACKAGES).indexOf(pack) >
-      Object.keys(PACKAGES).indexOf(packageType);
+    const currentIdx = Object.keys(PACKAGES).indexOf(packageType);
+    const packIdx = Object.keys(PACKAGES).indexOf(pack);
+    if (packIdx <= currentIdx && packageType !== "free") {
+      return toast.error("Cannot downgrade your package.");
+    }
 
-    if (!isUpgrade && packageType !== "free") {
-      toast.error("❌ You can't downgrade your package.");
+    const price = PACKAGES[pack].priceTON;
+    const nanoTON = BigInt(Math.round(parseFloat(price) * 1e9)).toString();
+    const rawRecipient = "UQAMHY5HLY1d5825GNGRD7_KwufvunFH27zIklPvzbao8D5M"; // 👈 could be U or E
+
+    let recipient;
+    try {
+      const parsed = Address.parseFriendly(rawRecipient).address;
+      recipient = parsed.toString(); // now always bounceable EQ...
+    } catch (err) {
+      console.error(err);
+      toast.error("❌ Invalid recipient wallet address.");
       return;
     }
 
     try {
-      const recipientAddress = "EQC2rOXbhBQVuKM1AvYjC0Ks2l_c9iGJJ6vx5MvD9Y0TgrLI";
-      const nanoTON = BigInt(
-        Math.floor(parseFloat(PACKAGES[pack].priceTON) * 1e9)
-      ).toString();
-
-      console.log(`Sending ${nanoTON} nanoTON for package ${pack}`);
-
       await tonConnectUI.sendTransaction({
         validUntil: Math.floor(Date.now() / 1000) + 360,
-        messages: [{ address: recipientAddress, amount: nanoTON }],
+        messages: [{ address: recipient, amount: nanoTON }]
       });
 
-      const expiryDate = Date.now() + SIX_MONTHS_MS;
-
+      const expiry = Date.now() + SIX_MONTHS_MS;
       setPackageType(pack);
       setSpinsUsed(0);
       localStorage.setItem("packageType", pack);
       localStorage.setItem("spinsUsed", "0");
       localStorage.setItem("spinsDate", todayStr());
-      localStorage.setItem("packageExpiresAt", expiryDate.toString());
+      localStorage.setItem("packageExpiresAt", expiry.toString());
 
-      const telegramId = localStorage.getItem("telegramId");
-      if (telegramId) {
-        await updateUser(telegramId, {
-          packageType: pack,
-          packageExpiresAt: new Date(expiryDate),
-        });
-      }
+      const id = localStorage.getItem("telegramId");
+      if (id) await updateUser(id, { packageType: pack, packageExpiresAt: new Date(expiry) });
 
       toast.success(
-        <>
-          <FontAwesomeIcon icon={faGem} className="mr-2" />
-          {PACKAGES[pack].label} activated – {PACKAGES[pack].spins} spins/day!
-        </>
+        <><FontAwesomeIcon icon={faGem} className="mr-2" />{PACKAGES[pack].label} activated!</>
       );
       setShowPremium(false);
-    } catch (err) {
-      console.error(err);
-      toast.error("❌ TON payment failed or cancelled.");
+    } catch (e) {
+      console.error(e);
+      toast.error("❌ Transaction failed or cancelled.");
     }
   };
 
   return (
     <div className="min-h-screen bg-[#0f0f0f] text-white flex items-center justify-center px-4">
-      <div className="w-full max-w-md flex flex-col items-center py-10 text-center">
-        <div className="w-full flex justify-end mb-4">
-          <TonConnectButton />
-        </div>
-
+      <div className="w-full max-w-md text-center py-10">
+        <div className="flex justify-end mb-4"><TonConnectButton /></div>
         <h1 className="text-3xl font-bold text-yellow-400 mb-4">🎡 Spin & Earn</h1>
+        <p className="text-lg mb-4">
+          <FontAwesomeIcon icon={faCoins} className="mr-2 text-yellow-400" />
+          Balance: <b className="text-yellow-400">{formatCoins(balance)}</b>
+        </p>
+        <p className="mb-2">
+          Package: <b className="text-yellow-400">{packageType}</b> |
+          Spins: {spinsUsed} / {PACKAGE_SPINS[packageType] || 1}
+        </p>
 
-        <div className="text-lg mb-4">
-          <FontAwesomeIcon icon={faCoins} className="text-yellow-400 mr-2" />
-          Balance: <span className="text-yellow-400">{formatCoins(balance)}</span>
-        </div>
-
-        <div className="mb-2">
-          Package:{" "}
-          <span className="text-yellow-400 font-semibold capitalize">{packageType}</span> | Spins used today: {spinsUsed} / {PACKAGE_SPINS[packageType] || 1}
-        </div>
-
-        <div className="w-[300px] sm:w-[320px] max-w-[90vw] mb-6">
-          <Wheel
-            mustStartSpinning={mustSpin}
-            prizeNumber={prizeNumber}
-            data={data}
-            backgroundColors={["#7c3aed", "#9333ea"]}
-            textColors={["#ffffff"]}
-            onStopSpinning={() => {
-              setMustSpin(false);
-              const reward = data[prizeNumber].option;
-              setResult(reward);
-              handleReward(reward);
-            }}
-            radiusLineWidth={1}
-            innerRadius={15}
-            outerBorderColor={"#facc15"}
-            outerBorderWidth={10}
-            radiusLineColor={"#000"}
-            fontSize={16}
-          />
-        </div>
+        <Wheel
+          mustStartSpinning={mustSpin}
+          prizeNumber={prizeNumber}
+          data={data}
+          backgroundColors={["#7c3aed", "#9333ea"]}
+          textColors={["#ffffff"]}
+          onStopSpinning={() => {
+            setMustSpin(false);
+            const reward = data[prizeNumber].option;
+            setResult(reward);
+            handleReward(reward);
+          }}
+          radiusLineWidth={1}
+          innerRadius={15}
+          outerBorderColor={"#facc15"}
+          outerBorderWidth={10}
+          radiusLineColor={"#000"}
+          fontSize={16}
+        />
 
         <button
           onClick={handleSpinClick}
           disabled={mustSpin}
-          className={`mb-4 px-8 py-3 bg-purple-700 hover:bg-purple-800 rounded-full text-lg font-bold flex items-center justify-center ${mustSpin ? "opacity-50 cursor-not-allowed" : ""}`}
-        >
+          className={`mb-4 px-8 py-3 bg-purple-700 hover:bg-purple-800 rounded-full text-lg font-bold flex items-center justify-center ${mustSpin ? "opacity-50 cursor-not-allowed" : ""}`}>
           {mustSpin ? (
             <>
               <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
@@ -263,10 +224,8 @@ export default function Spin() {
         {packageType === "free" && (
           <button
             onClick={() => setShowPremium(true)}
-            className="mb-2 px-6 py-2 bg-yellow-400 text-black rounded-full font-bold flex items-center justify-center"
-          >
-            <FontAwesomeIcon icon={faStar} className="mr-2" />
-            Get Premium with TON
+            className="mb-2 px-6 py-2 bg-yellow-400 text-black rounded-full font-bold flex items-center justify-center">
+            <FontAwesomeIcon icon={faStar} className="mr-2" />Get Premium
           </button>
         )}
 
@@ -282,63 +241,44 @@ export default function Spin() {
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-[#111] p-6 rounded-xl text-white max-w-sm w-full text-center">
             <h2 className="text-xl font-bold text-yellow-400 mb-4 flex justify-center items-center">
-              <FontAwesomeIcon icon={faGem} className="mr-2" />
-              Premium Packages
+              <FontAwesomeIcon icon={faGem} className="mr-2" /> Premium Packages
             </h2>
-
-            {!tonConnectUI.connected && (
-              <div className="text-yellow-400 text-center mb-4 font-semibold">
-                Please connect your TON wallet to purchase premium packages.
-              </div>
-            )}
-
-            <ul className="text-sm space-y-4 mb-4 text-left">
-              {Object.entries(PACKAGES).map(([key, pack]) => {
-                const medalColors = {
-                  bronze: "#cd7f32",
-                  silver: "#c0c0c0",
-                  gold: "#ffd700",
-                };
-                const isDisabled =
-                  !tonConnectUI.connected ||
-                  Object.keys(PACKAGES).indexOf(key) <=
-                    Object.keys(PACKAGES).indexOf(packageType);
+            {!tonConnectUI.connected && <p className="text-yellow-400 mb-4">Connect your TON wallet.</p>}
+            <ul className="space-y-4 text-left text-sm">
+              {Object.entries(PACKAGES).map(([key, pkg]) => {
+                const currentIdx = Object.keys(PACKAGES).indexOf(packageType);
+                const isDisabled = !tonConnectUI.connected || Object.keys(PACKAGES).indexOf(key) <= currentIdx;
                 return (
                   <li key={key} className="flex justify-between items-center">
                     <div className="flex items-center space-x-2">
-                      <FontAwesomeIcon
-                        icon={faMedal}
-                        style={{ color: medalColors[key] }}
-                        size="lg"
-                      />
-                      <span className="font-semibold">{pack.label}</span>
-                      <span className="flex items-center ml-4 text-yellow-400">
+                      <FontAwesomeIcon icon={faMedal} size="lg" style={{
+                        color: key === "gold" ? "#ffd700" : key === "silver" ? "#c0c0c0" : "#cd7f32"
+                      }} />
+                      <span className="font-semibold">{pkg.label}</span>
+                      <span className="ml-4 text-yellow-400">
                         <FontAwesomeIcon icon={faRepeat} className="mr-1" />
-                        {pack.spins} spins/day
+                        {pkg.spins} spins/day
                       </span>
-                      <span className="flex items-center ml-4 text-green-400">
+                      <span className="ml-4 text-green-400">
                         <FontAwesomeIcon icon={faWallet} className="mr-1" />
-                        {pack.priceTON} TON
+                        {pkg.priceTON} TON
                       </span>
                     </div>
                     <button
                       onClick={() => handleBuyPackage(key)}
                       disabled={isDisabled}
-                      className={`px-4 py-1 rounded-full font-bold text-sm flex items-center ${
+                      className={`px-4 py-1 rounded-full text-sm font-bold ${
                         !isDisabled ? "bg-green-600 hover:bg-green-700" : "bg-gray-600 cursor-not-allowed"
-                      }`}
-                    >
+                      }`}>
                       Buy
                     </button>
                   </li>
                 );
               })}
             </ul>
-
             <button
               onClick={() => setShowPremium(false)}
-              className="mt-3 text-gray-400 hover:text-white text-sm flex justify-center items-center w-full"
-            >
+              className="mt-3 text-gray-400 hover:text-white text-sm flex items-center justify-center w-full">
               <FontAwesomeIcon icon={faCircleXmark} className="mr-2" />
               Cancel
             </button>
