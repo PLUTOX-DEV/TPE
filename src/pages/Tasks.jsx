@@ -9,13 +9,12 @@ import { faTwitter, faTelegram } from "@fortawesome/free-brands-svg-icons";
 import toast from "react-hot-toast";
 import { getUser, updateUser } from "../api/userApi";
 
-// Format number to show "k" for thousands
+// Format reward numbers like 1k, 2k
 const formatReward = (amount) => {
-  if (amount >= 1000) return `${(amount / 1000).toFixed(0)}k`;
-  return amount;
+  return amount >= 1000 ? `${(amount / 1000).toFixed(0)}k` : amount;
 };
 
-// Task definitions
+// Task list
 const TASKS = [
   {
     id: 1,
@@ -109,7 +108,7 @@ export default function Tasks() {
           balance: newBalance,
         });
       } catch (err) {
-        console.error("❌ Failed to sync task to backend:", err);
+        console.error("❌ Failed to sync claim:", err);
       }
     }
   };
@@ -144,7 +143,7 @@ export default function Tasks() {
                 </div>
               </div>
 
-              {/* Action Buttons */}
+              {/* Buttons */}
               <div className="flex gap-3 flex-wrap">
                 <button
                   onClick={() =>

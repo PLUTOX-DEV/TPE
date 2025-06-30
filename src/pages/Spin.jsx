@@ -2,7 +2,7 @@
 import { Buffer } from "buffer";
 window.Buffer = Buffer;
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import toast from "react-hot-toast";
 import { useTonConnectUI, TonConnectButton } from "@tonconnect/ui-react";
 import { Wheel } from "react-custom-roulette";
@@ -20,7 +20,8 @@ import {
   faCircleXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { updateUser } from "../api/userApi";
-import { Address } from "@ton/core"; // TON address parser
+import { Address } from "@ton/core";
+import { UserContext } from "../context/UserContext";
 
 const formatCoins = (num) => {
   if (num >= 1e6) return (num / 1e6).toFixed(1) + "M";
@@ -51,18 +52,18 @@ export default function Spin() {
   const [mustSpin, setMustSpin] = useState(false);
   const [prizeNumber, setPrizeNumber] = useState(0);
   const [result, setResult] = useState(null);
-  const [balance, setBalance] = useState(0);
   const [packageType, setPackageType] = useState("free");
   const [spinsUsed, setSpinsUsed] = useState(0);
   const [showPremium, setShowPremium] = useState(false);
   const [tonConnectUI] = useTonConnectUI();
 
+  const { user, setUser, loadingUser } = useContext(UserContext);
+  const balance = user?.balance || 0;
+  const telegramId = localStorage.getItem("telegramId");
+
   const todayStr = () => new Date().toISOString().split("T")[0];
 
   useEffect(() => {
-    const savedBal = parseInt(localStorage.getItem("tapCoins")) || 0;
-    setBalance(savedBal);
-
     const pkg = localStorage.getItem("packageType") || "free";
     const used = parseInt(localStorage.getItem("spinsUsed")) || 0;
     const lastDay = localStorage.getItem("spinsDate");
@@ -81,12 +82,10 @@ export default function Spin() {
       setSpinsUsed(0);
       localStorage.setItem("spinsUsed", "0");
       localStorage.setItem("spinsDate", todayStr());
-    } else setSpinsUsed(used);
+    } else {
+      setSpinsUsed(used);
+    }
   }, []);
-
-  useEffect(() => {
-    localStorage.setItem("tapCoins", balance.toString());
-  }, [balance]);
 
   const incrementSpinUsed = () => {
     const newCount = spinsUsed + 1;
@@ -119,10 +118,15 @@ export default function Spin() {
   const handleReward = async (rewardText) => {
     const amount = parseInt(rewardText.replace(/\D/g, "")) || 0;
     const newBal = balance + amount;
-    setBalance(newBal);
 
-    const id = localStorage.getItem("telegramId");
-    if (id) await updateUser(id, { balance: newBal });
+    if (telegramId) {
+      try {
+        await updateUser(telegramId, { balance: newBal });
+        setUser((prev) => ({ ...prev, balance: newBal }));
+      } catch (err) {
+        console.error("❌ Failed to update balance:", err);
+      }
+    }
 
     toast.success(
       <>
@@ -171,8 +175,12 @@ export default function Spin() {
       localStorage.setItem("spinsDate", todayStr());
       localStorage.setItem("packageExpiresAt", expiry.toString());
 
-      const id = localStorage.getItem("telegramId");
-      if (id) await updateUser(id, { packageType: pack, packageExpiresAt: new Date(expiry) });
+      if (telegramId) {
+        await updateUser(telegramId, {
+          packageType: pack,
+          packageExpiresAt: new Date(expiry),
+        });
+      }
 
       toast.success(
         <>
@@ -187,6 +195,15 @@ export default function Spin() {
     }
   };
 
+  if (loadingUser) {
+    return (
+      <div className="flex justify-center items-center min-h-screen text-white bg-black">
+        <FontAwesomeIcon icon={faSpinner} spin className="mr-3 text-3xl" />
+        Loading your profile...
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#0f0f0f] text-white flex flex-col items-center justify-center px-4 py-10">
       <div className="w-full max-w-md text-center">
@@ -199,10 +216,10 @@ export default function Spin() {
           Balance: <b className="text-yellow-400">{formatCoins(balance)}</b>
         </p>
         <p className="mb-2">
-          Package: <b className="text-yellow-400">{packageType}</b> | Spins: {spinsUsed} / {PACKAGE_SPINS[packageType] || 1}
+          Package: <b className="text-yellow-400">{packageType}</b> | Spins:{" "}
+          {spinsUsed} / {PACKAGE_SPINS[packageType] || 1}
         </p>
 
-        {/* Wheel container */}
         <div className="flex justify-center items-center mb-6">
           <div className="w-full max-w-[320px] aspect-square">
             <Wheel
@@ -227,7 +244,6 @@ export default function Spin() {
           </div>
         </div>
 
-        {/* Buttons container with vertical stack & center alignment */}
         <div className="flex flex-col items-center space-y-4 mb-4">
           <button
             onClick={handleSpinClick}
@@ -274,11 +290,14 @@ export default function Spin() {
             <h2 className="text-xl font-bold text-yellow-400 mb-4 flex justify-center items-center">
               <FontAwesomeIcon icon={faGem} className="mr-2" /> Premium Packages
             </h2>
-            {!tonConnectUI.connected && <p className="text-yellow-400 mb-4">Connect your TON wallet.</p>}
+            {!tonConnectUI.connected && (
+              <p className="text-yellow-400 mb-4">Connect your TON wallet.</p>
+            )}
             <ul className="space-y-4 text-left text-sm">
               {Object.entries(PACKAGES).map(([key, pkg]) => {
                 const currentIdx = Object.keys(PACKAGES).indexOf(packageType);
-                const isDisabled = !tonConnectUI.connected || Object.keys(PACKAGES).indexOf(key) <= currentIdx;
+                const isDisabled =
+                  !tonConnectUI.connected || Object.keys(PACKAGES).indexOf(key) <= currentIdx;
                 return (
                   <li key={key} className="flex justify-between items-center">
                     <div className="flex items-center space-x-2">
@@ -286,7 +305,12 @@ export default function Spin() {
                         icon={faMedal}
                         size="lg"
                         style={{
-                          color: key === "gold" ? "#ffd700" : key === "silver" ? "#c0c0c0" : "#cd7f32",
+                          color:
+                            key === "gold"
+                              ? "#ffd700"
+                              : key === "silver"
+                              ? "#c0c0c0"
+                              : "#cd7f32",
                         }}
                       />
                       <span className="font-semibold">{pkg.label}</span>
@@ -303,7 +327,9 @@ export default function Spin() {
                       onClick={() => handleBuyPackage(key)}
                       disabled={isDisabled}
                       className={`px-4 py-1 rounded-full text-sm font-bold ${
-                        !isDisabled ? "bg-green-600 hover:bg-green-700" : "bg-gray-600 cursor-not-allowed"
+                        !isDisabled
+                          ? "bg-green-600 hover:bg-green-700"
+                          : "bg-gray-600 cursor-not-allowed"
                       }`}
                     >
                       Buy
@@ -312,11 +338,9 @@ export default function Spin() {
                 );
               })}
             </ul>
-            {/* Network fee note */}
             <p className="text-sm text-gray-400 mt-4">
               * Network fee (~0.0057 TON) applies in addition to the package price.
             </p>
-
             <button
               onClick={() => setShowPremium(false)}
               className="mt-6 text-gray-400 hover:text-white text-sm flex items-center justify-center w-full"
