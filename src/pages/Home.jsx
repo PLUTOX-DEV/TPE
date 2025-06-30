@@ -3,7 +3,7 @@ import coinImg from "../assets/image.jpg";
 import { StaminaContext } from "../context/StaminaContext";
 import { UserContext } from "../context/UserContext";
 import toast from "react-hot-toast";
-import { updateUser } from "../api/userApi";
+import { getUser, updateUser } from "../api/userApi";
 
 const formatCoins = (num) => {
   if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + "M";
@@ -13,7 +13,7 @@ const formatCoins = (num) => {
 
 export default function Home() {
   const { stamina, setStamina, maxStamina } = useContext(StaminaContext);
-  const { user, setUser, loadingUser } = useContext(UserContext);
+  const { user, setUser, loadingUser, setLoadingUser } = useContext(UserContext);
 
   const [tapping, setTapping] = useState(false);
   const [coins, setCoins] = useState(0);
@@ -23,6 +23,27 @@ export default function Home() {
   const isVIP = user?.isVIP || false;
   const telegramId = localStorage.getItem("telegramId");
 
+  // Fetch fresh user data and sync state + localStorage
+  const fetchUserData = async () => {
+    if (!telegramId) return;
+    try {
+      setLoadingUser(true);
+      const freshUser = await getUser(telegramId);
+      setUser(freshUser);
+      setCoins(freshUser.balance || 0);
+      localStorage.setItem("tapCoins", (freshUser.balance || 0).toString());
+    } catch (err) {
+      console.error("Failed to refresh user data:", err);
+    } finally {
+      setLoadingUser(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUserData();
+  }, []);
+
+  // Sync coins state if user.balance changes externally
   useEffect(() => {
     if (user) {
       setCoins(user.balance || 0);
@@ -38,7 +59,7 @@ export default function Home() {
     }
   }, []);
 
-  // Auto tap bot
+  // Auto tap bot: tap every 3 seconds if stamina available
   useEffect(() => {
     if (!hasTapBot || loadingUser) return;
     const interval = setInterval(() => {
@@ -68,14 +89,17 @@ export default function Home() {
       if (telegramId) {
         try {
           await updateUser(telegramId, { balance: newTotal, isVIP });
-          setUser((prev) => ({ ...prev, balance: newTotal }));
+          // Fetch fresh user data after update for sync
+          await fetchUserData();
         } catch (err) {
           console.error("Failed to sync:", err);
         }
       }
 
-      if (!isBot) toast.success(`+${earned} 🪙`);
-      if (!isBot) setTapping(false);
+      if (!isBot) {
+        toast.success(`+${earned} 🪙`);
+        setTapping(false);
+      }
     }, 200);
   };
 
