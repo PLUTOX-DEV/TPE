@@ -227,35 +227,38 @@ export default function Spin() {
           </div>
         </div>
 
-        <button
-          onClick={handleSpinClick}
-          disabled={mustSpin}
-          className={`mb-4 px-8 py-3 bg-purple-700 hover:bg-purple-800 rounded-full text-lg font-bold flex items-center justify-center ${
-            mustSpin ? "opacity-50 cursor-not-allowed" : ""
-          }`}
-        >
-          {mustSpin ? (
-            <>
-              <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
-              Spinning...
-            </>
-          ) : (
-            <>
-              <FontAwesomeIcon icon={faCoins} className="mr-2" />
-              Spin Now
-            </>
-          )}
-        </button>
-
-        {packageType === "free" && (
+        {/* Buttons container with vertical stack & center alignment */}
+        <div className="flex flex-col items-center space-y-4 mb-4">
           <button
-            onClick={() => setShowPremium(true)}
-            className="mb-2 px-6 py-2 bg-yellow-400 text-black rounded-full font-bold flex items-center justify-center"
+            onClick={handleSpinClick}
+            disabled={mustSpin}
+            className={`px-8 py-3 bg-purple-700 hover:bg-purple-800 rounded-full text-lg font-bold flex items-center justify-center ${
+              mustSpin ? "opacity-50 cursor-not-allowed" : ""
+            }`}
           >
-            <FontAwesomeIcon icon={faStar} className="mr-2" />
-            Get Premium
+            {mustSpin ? (
+              <>
+                <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
+                Spinning...
+              </>
+            ) : (
+              <>
+                <FontAwesomeIcon icon={faCoins} className="mr-2" />
+                Spin Now
+              </>
+            )}
           </button>
-        )}
+
+          {packageType === "free" && (
+            <button
+              onClick={() => setShowPremium(true)}
+              className="px-6 py-2 bg-yellow-400 text-black rounded-full font-bold flex items-center justify-center"
+            >
+              <FontAwesomeIcon icon={faStar} className="mr-2" />
+              Get Premium
+            </button>
+          )}
+        </div>
 
         {result && (
           <div className="mt-4 text-2xl font-bold text-green-300 animate-pulse">
