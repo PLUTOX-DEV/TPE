@@ -8,9 +8,16 @@ import { useTonConnectUI, TonConnectButton } from "@tonconnect/ui-react";
 import { Wheel } from "react-custom-roulette";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faCoins, faStar, faGem, faWallet,
-  faClock, faSpinner, faMedal,
-  faRepeat, faCheckCircle, faCircleXmark
+  faCoins,
+  faStar,
+  faGem,
+  faWallet,
+  faClock,
+  faSpinner,
+  faMedal,
+  faRepeat,
+  faCheckCircle,
+  faCircleXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { updateUser } from "../api/userApi";
 import { Address } from "@ton/core"; // TON address parser
@@ -29,14 +36,14 @@ const data = [
   { option: "ZERO", style: { backgroundColor: "#facc15", textColor: "#000" } },
   { option: "+10000", style: { backgroundColor: "#f472b6", textColor: "white" } },
   { option: "+15", style: { backgroundColor: "#34d399", textColor: "white" } },
-  { option: "+5", style: { backgroundColor: "#60a5fa", textColor: "white" } }
+  { option: "+5", style: { backgroundColor: "#60a5fa", textColor: "white" } },
 ];
 
 const PACKAGE_SPINS = { free: 1, bronze: 3, silver: 5, gold: 7 };
 const PACKAGES = {
   bronze: { label: "Bronze", priceTON: "10", spins: 4 },
   silver: { label: "Silver", priceTON: "25", spins: 10 },
-  gold: { label: "Gold", priceTON: "40", spins: 20 }
+  gold: { label: "Gold", priceTON: "40", spins: 20 },
 };
 const SIX_MONTHS_MS = 1000 * 60 * 60 * 24 * 30 * 6;
 
@@ -118,7 +125,10 @@ export default function Spin() {
     if (id) await updateUser(id, { balance: newBal });
 
     toast.success(
-      <><FontAwesomeIcon icon={faCoins} className="mr-2" />+{formatCoins(amount)} Coins!</>
+      <>
+        <FontAwesomeIcon icon={faCoins} className="mr-2" />
+        +{formatCoins(amount)} Coins!
+      </>
     );
   };
 
@@ -135,12 +145,12 @@ export default function Spin() {
 
     const price = PACKAGES[pack].priceTON;
     const nanoTON = BigInt(Math.round(parseFloat(price) * 1e9)).toString();
-    const rawRecipient = "UQAMHY5HLY1d5825GNGRD7_KwufvunFH27zIklPvzbao8D5M"; // could start with U or E
+    const rawRecipient = "UQAMHY5HLY1d5825GNGRD7_KwufvunFH27zIklPvzbao8D5M";
 
     let recipient;
     try {
       const parsed = Address.parseFriendly(rawRecipient).address;
-      recipient = parsed.toString(); // always bounceable EQ...
+      recipient = parsed.toString();
     } catch (err) {
       console.error(err);
       toast.error("❌ Invalid recipient wallet address.");
@@ -150,7 +160,7 @@ export default function Spin() {
     try {
       await tonConnectUI.sendTransaction({
         validUntil: Math.floor(Date.now() / 1000) + 360,
-        messages: [{ address: recipient, amount: nanoTON }]
+        messages: [{ address: recipient, amount: nanoTON }],
       });
 
       const expiry = Date.now() + SIX_MONTHS_MS;
@@ -165,7 +175,10 @@ export default function Spin() {
       if (id) await updateUser(id, { packageType: pack, packageExpiresAt: new Date(expiry) });
 
       toast.success(
-        <><FontAwesomeIcon icon={faGem} className="mr-2" />{PACKAGES[pack].label} activated!</>
+        <>
+          <FontAwesomeIcon icon={faGem} className="mr-2" />
+          {PACKAGES[pack].label} activated!
+        </>
       );
       setShowPremium(false);
     } catch (e) {
@@ -175,43 +188,52 @@ export default function Spin() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f0f0f] text-white flex items-center justify-center px-4">
-      <div className="w-full max-w-md text-center py-10">
-        <div className="flex justify-end mb-4"><TonConnectButton /></div>
+    <div className="min-h-screen bg-[#0f0f0f] text-white flex flex-col items-center justify-center px-4 py-10">
+      <div className="w-full max-w-md text-center">
+        <div className="flex justify-end mb-4">
+          <TonConnectButton />
+        </div>
         <h1 className="text-3xl font-bold text-yellow-400 mb-4">🎡 Spin & Earn</h1>
         <p className="text-lg mb-4">
           <FontAwesomeIcon icon={faCoins} className="mr-2 text-yellow-400" />
           Balance: <b className="text-yellow-400">{formatCoins(balance)}</b>
         </p>
         <p className="mb-2">
-          Package: <b className="text-yellow-400">{packageType}</b> |
-          Spins: {spinsUsed} / {PACKAGE_SPINS[packageType] || 1}
+          Package: <b className="text-yellow-400">{packageType}</b> | Spins: {spinsUsed} / {PACKAGE_SPINS[packageType] || 1}
         </p>
 
-        <Wheel
-          mustStartSpinning={mustSpin}
-          prizeNumber={prizeNumber}
-          data={data}
-          backgroundColors={["#7c3aed", "#9333ea"]}
-          textColors={["#ffffff"]}
-          onStopSpinning={() => {
-            setMustSpin(false);
-            const reward = data[prizeNumber].option;
-            setResult(reward);
-            handleReward(reward);
-          }}
-          radiusLineWidth={1}
-          innerRadius={15}
-          outerBorderColor={"#facc15"}
-          outerBorderWidth={10}
-          radiusLineColor={"#000"}
-          fontSize={16}
-        />
+        {/* Wheel container */}
+        <div className="flex justify-center items-center mb-6">
+          <div className="w-full max-w-[320px] aspect-square">
+            <Wheel
+              mustStartSpinning={mustSpin}
+              prizeNumber={prizeNumber}
+              data={data}
+              backgroundColors={["#7c3aed", "#9333ea"]}
+              textColors={["#ffffff"]}
+              onStopSpinning={() => {
+                setMustSpin(false);
+                const reward = data[prizeNumber].option;
+                setResult(reward);
+                handleReward(reward);
+              }}
+              radiusLineWidth={1}
+              innerRadius={15}
+              outerBorderColor={"#facc15"}
+              outerBorderWidth={10}
+              radiusLineColor={"#000"}
+              fontSize={16}
+            />
+          </div>
+        </div>
 
         <button
           onClick={handleSpinClick}
           disabled={mustSpin}
-          className={`mb-4 px-8 py-3 bg-purple-700 hover:bg-purple-800 rounded-full text-lg font-bold flex items-center justify-center ${mustSpin ? "opacity-50 cursor-not-allowed" : ""}`}>
+          className={`mb-4 px-8 py-3 bg-purple-700 hover:bg-purple-800 rounded-full text-lg font-bold flex items-center justify-center ${
+            mustSpin ? "opacity-50 cursor-not-allowed" : ""
+          }`}
+        >
           {mustSpin ? (
             <>
               <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
@@ -228,8 +250,10 @@ export default function Spin() {
         {packageType === "free" && (
           <button
             onClick={() => setShowPremium(true)}
-            className="mb-2 px-6 py-2 bg-yellow-400 text-black rounded-full font-bold flex items-center justify-center">
-            <FontAwesomeIcon icon={faStar} className="mr-2" />Get Premium
+            className="mb-2 px-6 py-2 bg-yellow-400 text-black rounded-full font-bold flex items-center justify-center"
+          >
+            <FontAwesomeIcon icon={faStar} className="mr-2" />
+            Get Premium
           </button>
         )}
 
@@ -242,7 +266,7 @@ export default function Spin() {
       </div>
 
       {showPremium && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4">
           <div className="bg-[#111] p-6 rounded-xl text-white max-w-sm w-full text-center">
             <h2 className="text-xl font-bold text-yellow-400 mb-4 flex justify-center items-center">
               <FontAwesomeIcon icon={faGem} className="mr-2" /> Premium Packages
@@ -255,15 +279,19 @@ export default function Spin() {
                 return (
                   <li key={key} className="flex justify-between items-center">
                     <div className="flex items-center space-x-2">
-                      <FontAwesomeIcon icon={faMedal} size="lg" style={{
-                        color: key === "gold" ? "#ffd700" : key === "silver" ? "#c0c0c0" : "#cd7f32"
-                      }} />
+                      <FontAwesomeIcon
+                        icon={faMedal}
+                        size="lg"
+                        style={{
+                          color: key === "gold" ? "#ffd700" : key === "silver" ? "#c0c0c0" : "#cd7f32",
+                        }}
+                      />
                       <span className="font-semibold">{pkg.label}</span>
-                      <span className="ml-4 text-yellow-400">
+                      <span className="ml-4 text-yellow-400 flex items-center">
                         <FontAwesomeIcon icon={faRepeat} className="mr-1" />
                         {pkg.spins} spins/day
                       </span>
-                      <span className="ml-4 text-green-400">
+                      <span className="ml-4 text-green-400 flex items-center">
                         <FontAwesomeIcon icon={faWallet} className="mr-1" />
                         {pkg.priceTON} TON
                       </span>
@@ -273,16 +301,23 @@ export default function Spin() {
                       disabled={isDisabled}
                       className={`px-4 py-1 rounded-full text-sm font-bold ${
                         !isDisabled ? "bg-green-600 hover:bg-green-700" : "bg-gray-600 cursor-not-allowed"
-                      }`}>
+                      }`}
+                    >
                       Buy
                     </button>
                   </li>
                 );
               })}
             </ul>
+            {/* Network fee note */}
+            <p className="text-sm text-gray-400 mt-4">
+              * Network fee (~0.0057 TON) applies in addition to the package price.
+            </p>
+
             <button
               onClick={() => setShowPremium(false)}
-              className="mt-3 text-gray-400 hover:text-white text-sm flex items-center justify-center w-full">
+              className="mt-6 text-gray-400 hover:text-white text-sm flex items-center justify-center w-full"
+            >
               <FontAwesomeIcon icon={faCircleXmark} className="mr-2" />
               Cancel
             </button>
