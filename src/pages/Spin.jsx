@@ -1,3 +1,7 @@
+// Polyfill Buffer for browser
+import { Buffer } from "buffer";
+window.Buffer = Buffer;
+
 import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { useTonConnectUI, TonConnectButton } from "@tonconnect/ui-react";
@@ -9,7 +13,7 @@ import {
   faRepeat, faCheckCircle, faCircleXmark
 } from "@fortawesome/free-solid-svg-icons";
 import { updateUser } from "../api/userApi";
-import { Address } from "@ton/core"; // ✅ new
+import { Address } from "@ton/core"; // TON address parser
 
 const formatCoins = (num) => {
   if (num >= 1e6) return (num / 1e6).toFixed(1) + "M";
@@ -131,12 +135,12 @@ export default function Spin() {
 
     const price = PACKAGES[pack].priceTON;
     const nanoTON = BigInt(Math.round(parseFloat(price) * 1e9)).toString();
-    const rawRecipient = "UQAMHY5HLY1d5825GNGRD7_KwufvunFH27zIklPvzbao8D5M"; // 👈 could be U or E
+    const rawRecipient = "UQAMHY5HLY1d5825GNGRD7_KwufvunFH27zIklPvzbao8D5M"; // could start with U or E
 
     let recipient;
     try {
       const parsed = Address.parseFriendly(rawRecipient).address;
-      recipient = parsed.toString(); // now always bounceable EQ...
+      recipient = parsed.toString(); // always bounceable EQ...
     } catch (err) {
       console.error(err);
       toast.error("❌ Invalid recipient wallet address.");
