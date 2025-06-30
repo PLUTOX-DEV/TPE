@@ -17,7 +17,6 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { updateUser } from "../api/userApi";
 
-// Format numbers with k/M suffixes
 const formatCoins = (num) => {
   if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + "M";
   if (num >= 1_000) return (num / 1_000).toFixed(1) + "k";
@@ -71,11 +70,7 @@ export default function Spin() {
     const savedSpinsDate = localStorage.getItem("spinsDate");
     const savedExpiry = localStorage.getItem("packageExpiresAt");
 
-    if (
-      savedPackage !== "free" &&
-      savedExpiry &&
-      Date.now() > parseInt(savedExpiry)
-    ) {
+    if (savedPackage !== "free" && savedExpiry && Date.now() > parseInt(savedExpiry)) {
       setPackageType("free");
       localStorage.setItem("packageType", "free");
       localStorage.removeItem("packageExpiresAt");
@@ -164,8 +159,11 @@ export default function Spin() {
     }
 
     try {
-      const recipientAddress = "UQAha8bIACCx0y6PKFDrId_375lnlQVMMGotdZ81N812axgU";
-      const nanoTON = Math.round(parseFloat(PACKAGES[pack].priceTON) * 1e9).toString(); // ✅ Corrected
+      const recipientAddress = "EQC2rOXbhBQVuKM1AvYjC0Ks2l_c9iGJJ6vx5MvD9Y0TgrLI";
+      const nanoTON = BigInt(
+        Math.floor(parseFloat(PACKAGES[pack].priceTON) * 1e9)
+      ).toString();
+
       console.log(`Sending ${nanoTON} nanoTON for package ${pack}`);
 
       await tonConnectUI.sendTransaction({
@@ -210,9 +208,7 @@ export default function Spin() {
           <TonConnectButton />
         </div>
 
-        <h1 className="text-3xl font-bold text-yellow-400 mb-4">
-          🎡 Spin & Earn
-        </h1>
+        <h1 className="text-3xl font-bold text-yellow-400 mb-4">🎡 Spin & Earn</h1>
 
         <div className="text-lg mb-4">
           <FontAwesomeIcon icon={faCoins} className="text-yellow-400 mr-2" />
@@ -221,10 +217,7 @@ export default function Spin() {
 
         <div className="mb-2">
           Package:{" "}
-          <span className="text-yellow-400 font-semibold capitalize">
-            {packageType}
-          </span>{" "}
-          | Spins used today: {spinsUsed} / {PACKAGE_SPINS[packageType] || 1}
+          <span className="text-yellow-400 font-semibold capitalize">{packageType}</span> | Spins used today: {spinsUsed} / {PACKAGE_SPINS[packageType] || 1}
         </div>
 
         <div className="w-[300px] sm:w-[320px] max-w-[90vw] mb-6">
@@ -252,9 +245,7 @@ export default function Spin() {
         <button
           onClick={handleSpinClick}
           disabled={mustSpin}
-          className={`mb-4 px-8 py-3 bg-purple-700 hover:bg-purple-800 rounded-full text-lg font-bold flex items-center justify-center ${
-            mustSpin ? "opacity-50 cursor-not-allowed" : ""
-          }`}
+          className={`mb-4 px-8 py-3 bg-purple-700 hover:bg-purple-800 rounded-full text-lg font-bold flex items-center justify-center ${mustSpin ? "opacity-50 cursor-not-allowed" : ""}`}
         >
           {mustSpin ? (
             <>
@@ -334,9 +325,7 @@ export default function Spin() {
                       onClick={() => handleBuyPackage(key)}
                       disabled={isDisabled}
                       className={`px-4 py-1 rounded-full font-bold text-sm flex items-center ${
-                        !isDisabled
-                          ? "bg-green-600 hover:bg-green-700"
-                          : "bg-gray-600 cursor-not-allowed"
+                        !isDisabled ? "bg-green-600 hover:bg-green-700" : "bg-gray-600 cursor-not-allowed"
                       }`}
                     >
                       Buy
