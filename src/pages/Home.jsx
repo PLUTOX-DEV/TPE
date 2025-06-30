@@ -4,7 +4,7 @@ import { StaminaContext } from "../context/StaminaContext";
 import toast from "react-hot-toast";
 import { getUser, updateUser } from "../api/userApi";
 
-// Format numbers with k, M suffixes
+// Format number
 const formatCoins = (num) => {
   if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + "M";
   if (num >= 1_000) return (num / 1_000).toFixed(1) + "k";
@@ -23,49 +23,50 @@ export default function Home() {
 
   const telegramId = localStorage.getItem("telegramId");
 
+  const fetchUser = async () => {
+    if (!telegramId) return;
+
+    try {
+      const user = await getUser(telegramId);
+
+      setCoins(user.balance || 0);
+      setMultiplier(user.multiplier || 1);
+      setRegenSpeed(user.staminaRegenSpeed || 10000);
+      setHasTapBot(user.hasTapBot || false);
+      setIsVIP(user.isVIP || false);
+
+      // sync to local storage
+      localStorage.setItem("tapCoins", user.balance || 0);
+      localStorage.setItem("tapMultiplier", user.multiplier || 1);
+      localStorage.setItem("staminaRegenSpeed", user.staminaRegenSpeed || 10000);
+      localStorage.setItem("hasTapBot", user.hasTapBot ? "true" : "false");
+      localStorage.setItem("isVIP", user.isVIP ? "true" : "false");
+    } catch (err) {
+      console.error("❌ Failed to fetch user:", err);
+
+      // fallback from localStorage
+      setCoins(parseInt(localStorage.getItem("tapCoins")) || 0);
+      setMultiplier(parseInt(localStorage.getItem("tapMultiplier")) || 1);
+      setRegenSpeed(parseInt(localStorage.getItem("staminaRegenSpeed")) || 10000);
+      setHasTapBot(localStorage.getItem("hasTapBot") === "true");
+      setIsVIP(localStorage.getItem("isVIP") === "true");
+    }
+  };
+
   useEffect(() => {
-    const loadUser = async () => {
-      if (!telegramId) return;
+    fetchUser();
+  }, []);
 
-      try {
-        const user = await getUser(telegramId);
-
-        setCoins(user.balance || 0);
-        setMultiplier(user.multiplier || 1);
-        setRegenSpeed(user.staminaRegenSpeed || 10000);
-        setHasTapBot(user.hasTapBot || false);
-        setIsVIP(user.isVIP || false);
-
-        localStorage.setItem("tapCoins", user.balance || 0);
-        localStorage.setItem("tapMultiplier", user.multiplier || 1);
-        localStorage.setItem("staminaRegenSpeed", user.staminaRegenSpeed || 10000);
-        localStorage.setItem("hasTapBot", user.hasTapBot ? "true" : "false");
-        localStorage.setItem("isVIP", user.isVIP || false);
-      } catch (err) {
-        console.error("❌ Failed to fetch user from backend:", err);
-
-        setCoins(parseInt(localStorage.getItem("tapCoins")) || 0);
-        setRegenSpeed(parseInt(localStorage.getItem("staminaRegenSpeed")) || 10000);
-        setMultiplier(parseInt(localStorage.getItem("tapMultiplier")) || 1);
-        setHasTapBot(localStorage.getItem("hasTapBot") === "true");
-      }
-    };
-
-    loadUser();
-  }, [telegramId]);
-
-  // Show welcome message once
+  // Welcome message (only first visit)
   useEffect(() => {
-    const isFirstVisit = localStorage.getItem("isNewUser");
-    if (!isFirstVisit) {
-      toast.success("👋 Welcome to Nakabozoz Tap & Earn!", {
-        duration: 5000,
-      });
+    const isFirst = localStorage.getItem("isNewUser");
+    if (!isFirst) {
+      toast.success("👋 Welcome to Nakabozoz Tap & Earn!", { duration: 5000 });
       localStorage.setItem("isNewUser", "false");
     }
   }, []);
 
-  // Auto tap bot effect
+  // Auto Tap Bot effect
   useEffect(() => {
     if (!hasTapBot) return;
     const interval = setInterval(() => {
@@ -88,22 +89,26 @@ export default function Home() {
       setCoins(newTotal);
       localStorage.setItem("tapCoins", newTotal);
 
+      // Reduce stamina
       setStamina((prev) => {
         const updated = Math.max(0, prev - 1);
         localStorage.setItem("stamina", updated);
         return updated;
       });
 
+      // Update backend
       if (telegramId) {
         try {
           await updateUser(telegramId, { balance: newTotal, isVIP });
         } catch (err) {
-          console.error("❌ Backend sync failed:", err);
+          console.error("❌ Sync failed:", err);
         }
       }
 
-      if (!isBot) toast.success(`+${earned} 🪙`);
-      if (!isBot) setTapping(false);
+      if (!isBot) {
+        toast.success(`+${earned} 🪙`);
+        setTapping(false);
+      }
     }, 200);
   };
 
@@ -131,7 +136,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Stamina bar */}
+        {/* Stamina Bar */}
         <div className="w-full bg-gray-800 rounded-full h-4 mb-8 overflow-hidden shadow-inner">
           <div
             className="bg-yellow-400 h-full transition-all duration-500 ease-in-out"
@@ -139,7 +144,7 @@ export default function Home() {
           />
         </div>
 
-        {/* Tap button */}
+        {/* Tap Button */}
         <button
           onClick={() => handleTap(false)}
           disabled={tapping || stamina <= 0}
@@ -157,7 +162,6 @@ export default function Home() {
               tapping ? "animate-pingOnce" : ""
             }`}
           />
-          {/* Glow pulse */}
           <span className="absolute inset-0 rounded-full bg-yellow-400 opacity-20 animate-pulse" />
         </button>
 

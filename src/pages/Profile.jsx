@@ -24,38 +24,51 @@ const formatNumber = (num) => {
 
 export default function Profile() {
   const [user, setUser] = useState(null);
-  const [referrals, setReferrals] = useState([]);
-  const [coins, setCoins] = useState(0);
-  const [refEarnings, setRefEarnings] = useState(0);
-  const [multiplier, setMultiplier] = useState(1);
-  const [regenSpeed, setRegenSpeed] = useState(10000);
-  const [hasTapBot, setHasTapBot] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const telegramId = localStorage.getItem("telegramId");
-    if (!telegramId) return;
+
+    if (!telegramId) {
+      toast.error("Telegram ID not found in localStorage.");
+      setLoading(false);
+      return;
+    }
 
     getUser(telegramId)
       .then((data) => {
         setUser(data);
-        setCoins(data.balance);
-        setRefEarnings(data.referralEarnings || 0);
-        setReferrals(data.referrals || []);
-        setMultiplier(data.multiplier || 1);
-        setRegenSpeed(data.staminaRegenSpeed || 10000);
-        setHasTapBot(data.hasTapBot || false);
+        setLoading(false);
       })
-      .catch((err) => console.error("Failed to fetch user", err));
+      .catch((err) => {
+        console.error("Failed to fetch user", err);
+        toast.error("Failed to load profile.");
+        setLoading(false);
+      });
   }, []);
 
-  const referralLink = `https://t.me/Nakabozoz_bot/SpinTPE?start=${
-    user?.username || "your_ref_code"
-  }`;
+  const referralLink = `https://t.me/Nakabozoz_bot/SpinTPE?start=${user?.username || "your_ref_code"}`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(referralLink);
     toast.success("Referral link copied!");
   };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen text-white">
+        <p className="text-lg">Loading profile...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="flex justify-center items-center min-h-screen text-white">
+        <p className="text-lg">User not found.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[90vh] px-6 py-10 bg-gradient-to-b from-black via-gray-900 to-black text-white">
@@ -84,19 +97,19 @@ export default function Profile() {
           <InfoRow
             icon={faCoins}
             label="Coin Balance"
-            value={`${formatNumber(coins)} 🪙`}
+            value={`${formatNumber(user.balance)} 🪙`}
             color="text-green-400"
           />
           <InfoRow
             icon={faRocket}
             label="Tap Multiplier"
-            value={`x${multiplier}`}
+            value={`x${user.multiplier || 1}`}
             color="text-purple-300"
           />
           <InfoRow
             icon={faBolt}
             label="Regen Speed"
-            value={`${(regenSpeed / 1000).toFixed(1)}s`}
+            value={`${(user.staminaRegenSpeed || 10000) / 1000}s`}
             color="text-blue-300"
           />
           <InfoRow
@@ -105,24 +118,24 @@ export default function Profile() {
             value={
               <span
                 className={`flex items-center gap-2 font-semibold ${
-                  hasTapBot ? "text-green-400" : "text-red-400"
+                  user.hasTapBot ? "text-green-400" : "text-red-400"
                 }`}
               >
-                <FontAwesomeIcon icon={hasTapBot ? faCheckCircle : faTimesCircle} />
-                {hasTapBot ? "Owned" : "Not Owned"}
+                <FontAwesomeIcon icon={user.hasTapBot ? faCheckCircle : faTimesCircle} />
+                {user.hasTapBot ? "Owned" : "Not Owned"}
               </span>
             }
           />
           <InfoRow
             icon={faUserFriends}
             label="Referrals"
-            value={referrals.length}
+            value={user.referrals?.length || 0}
             color="text-yellow-300"
           />
           <InfoRow
             icon={faCoins}
             label="Referral Earnings"
-            value={`${formatNumber(refEarnings)} 🪙`}
+            value={`${formatNumber(user.referralEarnings || 0)} 🪙`}
             color="text-yellow-300"
           />
         </div>
@@ -140,20 +153,17 @@ export default function Profile() {
               title="Copy referral link"
               className="p-1 rounded-md hover:bg-yellow-500/70 transition"
             >
-              <FontAwesomeIcon
-                icon={faCopy}
-                className="text-yellow-400 hover:text-yellow-300"
-              />
+              <FontAwesomeIcon icon={faCopy} className="text-yellow-400 hover:text-yellow-300" />
             </button>
           </div>
         </div>
 
         {/* Referrals List */}
-        {referrals.length > 0 && (
+        {user.referrals?.length > 0 && (
           <div className="mt-8 max-h-40 overflow-y-auto">
             <h3 className="text-yellow-300 text-lg font-bold mb-3">Referred Users</h3>
             <ul className="text-gray-300 space-y-1 text-sm">
-              {referrals.map((r, idx) => (
+              {user.referrals.map((r, idx) => (
                 <li key={idx} className="flex items-center gap-2 hover:text-yellow-400 transition">
                   <span>👤</span> <span>{r.username}</span>
                 </li>

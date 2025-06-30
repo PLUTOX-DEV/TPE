@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { getUser, updateUser, buyTapBot } from "../api/userApi";
 import toast from "react-hot-toast";
 
-// Format coins with k/M suffixes
 const formatNumber = (num) => {
   if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + "M";
   if (num >= 1_000) return (num / 1_000).toFixed(1) + "k";
@@ -10,33 +9,43 @@ const formatNumber = (num) => {
 };
 
 export default function Store() {
+  const telegramId = localStorage.getItem("telegramId");
+
   const [coins, setCoins] = useState(0);
   const [multiplier, setMultiplier] = useState(1);
   const [regenSpeed, setRegenSpeed] = useState(10000);
   const [hasTapBot, setHasTapBot] = useState(false);
-  // loading states per upgrade button
+
+  const [loading, setLoading] = useState(true);
   const [loadingMultiplier, setLoadingMultiplier] = useState(false);
   const [loadingRegen, setLoadingRegen] = useState(false);
   const [loadingTapBot, setLoadingTapBot] = useState(false);
 
-  const telegramId = localStorage.getItem("telegramId");
-
-  useEffect(() => {
+  const fetchUser = async () => {
     if (!telegramId) return;
 
-    getUser(telegramId)
-      .then((data) => {
-        setCoins(data.balance);
-        setMultiplier(data.multiplier || 1);
-        setRegenSpeed(data.staminaRegenSpeed || 10000);
-        setHasTapBot(data.hasTapBot || false);
-      })
-      .catch((err) => console.error("Failed to load user", err));
-  }, [telegramId]);
+    try {
+      setLoading(true);
+      const user = await getUser(telegramId);
+      setCoins(user.balance || 0);
+      setMultiplier(user.multiplier || 1);
+      setRegenSpeed(user.staminaRegenSpeed || 10000);
+      setHasTapBot(user.hasTapBot || false);
+    } catch (err) {
+      toast.error("❌ Failed to fetch user data");
+      console.error("Error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const updateBalance = async (newBalance, updatedFields = {}) => {
-    await updateUser(telegramId, { balance: newBalance, ...updatedFields });
-    setCoins(newBalance);
+  useEffect(() => {
+    fetchUser();
+  }, []);
+
+  const updateBalance = async (newBalance, extraUpdates = {}) => {
+    await updateUser(telegramId, { balance: newBalance, ...extraUpdates });
+    fetchUser(); // Refresh after update
   };
 
   const handleBuyMultiplier = async () => {
@@ -47,7 +56,6 @@ export default function Store() {
     try {
       setLoadingMultiplier(true);
       await updateBalance(newBalance, { multiplier: newMult });
-      setMultiplier(newMult);
       toast.success("🔥 Tap Multiplier upgraded!");
     } catch (err) {
       toast.error("Failed to upgrade multiplier.");
@@ -64,7 +72,6 @@ export default function Store() {
     try {
       setLoadingRegen(true);
       await updateBalance(newBalance, { staminaRegenSpeed: newSpeed });
-      setRegenSpeed(newSpeed);
       toast.success("⚡ Regen Speed improved!");
     } catch (err) {
       toast.error("Failed to upgrade regen speed.");
@@ -74,22 +81,28 @@ export default function Store() {
   };
 
   const handleBuyTapBot = async () => {
-    if (hasTapBot) return toast.error("You already own the Tap Bot!");
-    if (coins < 100) return toast.error("Not enough coins.");
+    if (hasTapBot) return toast("Already owned");
+    if (coins < 100) return toast.error("Not enough coins");
 
     try {
       setLoadingTapBot(true);
-      const response = await buyTapBot(telegramId);
-      const updatedUser = response.user;
-      setCoins(updatedUser.balance);
-      setHasTapBot(true);
+      await buyTapBot(telegramId);
       toast.success("🤖 Tap Bot purchased!");
+      fetchUser(); // Refresh info
     } catch (err) {
       toast.error(err.message || "Failed to buy Tap Bot.");
     } finally {
       setLoadingTapBot(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="text-white text-center mt-10">
+        <p>Loading Store...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-4 py-10">
@@ -99,7 +112,6 @@ export default function Store() {
       </p>
 
       <div className="space-y-6 w-full max-w-sm">
-        {/* Tap Multiplier */}
         <UpgradeCard
           title="🔥 Tap Multiplier"
           subtitle={`Current: x${multiplier}`}
@@ -108,8 +120,6 @@ export default function Store() {
           loading={loadingMultiplier}
           disabled={coins < 50}
         />
-
-        {/* Regen Speed */}
         <UpgradeCard
           title="⚡ Faster Stamina Regen"
           subtitle={`Current: ${(regenSpeed / 1000).toFixed(1)}s`}
@@ -118,8 +128,6 @@ export default function Store() {
           loading={loadingRegen}
           disabled={coins < 80}
         />
-
-        {/* Tap Bot */}
         <div className="bg-white/10 p-4 rounded-xl border border-yellow-500/20">
           <p className="text-lg font-bold mb-1">🤖 Auto Tap Bot</p>
           <p className="text-sm mb-2">
