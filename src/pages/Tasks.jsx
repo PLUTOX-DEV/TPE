@@ -115,12 +115,12 @@ export default function Tasks() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-black via-gray-900 to-black px-4 py-10 text-white">
-      <h1 className="text-3xl font-bold text-yellow-400 mb-8 text-center">
-        📋 Tasks & Rewards
+    <div className="min-h-screen bg-gradient-to-b from-black via-gray-900 to-black px-4 py-12 text-white">
+      <h1 className="text-4xl font-bold text-yellow-400 mb-10 text-center drop-shadow-lg">
+        🧾 Complete Tasks — Earn Rewards
       </h1>
 
-      <div className="space-y-5 max-w-3xl mx-auto">
+      <div className="space-y-6 max-w-3xl mx-auto">
         {TASKS.map((task) => {
           const isVisited = visitedTasks[task.id];
           const isClaimed = claimedTasks[task.id];
@@ -128,35 +128,32 @@ export default function Tasks() {
           return (
             <div
               key={task.id}
-              className="bg-white/5 border border-yellow-400/30 rounded-xl p-4 flex flex-col md:flex-row md:items-center md:justify-between backdrop-blur-sm shadow-md transition-all"
+              className="bg-white/5 border border-yellow-500/20 hover:border-yellow-400 rounded-2xl p-6 flex flex-col md:flex-row md:items-center md:justify-between shadow-md backdrop-blur-lg transition-all duration-200"
             >
-              {/* Left Section */}
+              {/* Task Info */}
               <div className="flex items-center gap-4 mb-4 md:mb-0">
                 <FontAwesomeIcon
                   icon={task.icon}
-                  className="text-yellow-400 text-3xl bg-white/10 p-2 rounded-full"
+                  className="text-yellow-300 text-3xl bg-white/10 p-3 rounded-full"
                 />
                 <div>
-                  <h2 className="text-lg font-semibold">{task.action}</h2>
-                  <p className="text-gray-400 text-sm">
-                    Reward:{" "}
-                    <span className="text-yellow-300">
-                      {formatReward(task.reward)} 🪙
-                    </span>
-                  </p>
+                  <h2 className="text-lg font-semibold mb-1">{task.action}</h2>
+                  <span className="text-sm bg-yellow-400 text-black font-bold px-3 py-1 rounded-full">
+                    +{formatReward(task.reward)} 🪙
+                  </span>
                 </div>
               </div>
 
-              {/* Right Section */}
-              <div className="flex gap-3">
+              {/* Action Buttons */}
+              <div className="flex gap-3 flex-wrap">
                 <button
                   onClick={() =>
                     handleVisit(task.id, task.link, task.isReferral)
                   }
                   disabled={isVisited}
-                  className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all flex items-center gap-2 ${
+                  className={`px-5 py-2 rounded-full font-semibold text-sm shadow-md transition-transform duration-150 transform active:scale-95 flex items-center gap-2 ${
                     isVisited
-                      ? "bg-green-600 cursor-not-allowed opacity-60"
+                      ? "bg-green-600 opacity-60 cursor-not-allowed"
                       : "bg-blue-600 hover:bg-blue-700"
                   }`}
                 >
@@ -174,19 +171,19 @@ export default function Tasks() {
                 <button
                   onClick={() => handleClaim(task)}
                   disabled={!isVisited || isClaimed}
-                  className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
+                  className={`px-5 py-2 rounded-full text-sm font-bold transition-transform duration-150 transform active:scale-95 ${
                     isClaimed
                       ? "bg-green-500 opacity-60 cursor-not-allowed"
                       : isVisited
-                      ? "bg-yellow-400 hover:bg-yellow-300 text-black"
+                      ? "bg-yellow-400 text-black hover:bg-yellow-300"
                       : "bg-gray-600 cursor-not-allowed"
                   }`}
                 >
                   {isClaimed ? (
-                    <>
+                    <span className="flex items-center">
                       <FontAwesomeIcon icon={faCheckCircle} className="mr-1" />
                       Claimed
-                    </>
+                    </span>
                   ) : (
                     `Claim +${formatReward(task.reward)}`
                   )}

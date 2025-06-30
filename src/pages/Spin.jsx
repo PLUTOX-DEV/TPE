@@ -15,7 +15,7 @@ import {
   faMedal,
   faRepeat,
 } from "@fortawesome/free-solid-svg-icons";
-import { updateUser } from "../api/userApi"; // 🔥 Added backend sync
+import { updateUser } from "../api/userApi";
 
 const data = [
   { option: "+0", style: { backgroundColor: "#7c3aed", textColor: "white" } },
@@ -36,10 +36,12 @@ const PACKAGE_SPINS = {
 };
 
 const PACKAGES = {
-  bronze: { label: "Bronze", priceTON: "6.97", spins: 3 },
-  silver: { label: "Silver", priceTON: "12.16", spins: 5 },
-  gold: { label: "Gold", priceTON: "17.43", spins: 7 },
+  bronze: { label: "Bronze", priceTON: "10", spins: 4 },
+  silver: { label: "Silver", priceTON: "25", spins: 10 },
+  gold: { label: "Gold", priceTON: "40", spins: 20 },
 };
+
+const SIX_MONTHS_MS = 1000 * 60 * 60 * 24 * 30 * 6;
 
 export default function Spin() {
   const [mustSpin, setMustSpin] = useState(false);
@@ -56,9 +58,25 @@ export default function Spin() {
   useEffect(() => {
     const savedTapBalance = parseInt(localStorage.getItem("tapCoins")) || 0;
     setBalance(savedTapBalance);
+
     const savedPackage = localStorage.getItem("packageType") || "free";
     const savedSpinsUsed = parseInt(localStorage.getItem("spinsUsed")) || 0;
     const savedSpinsDate = localStorage.getItem("spinsDate");
+    const savedExpiry = localStorage.getItem("packageExpiresAt");
+
+    // Check for expiration
+    if (
+      savedPackage !== "free" &&
+      savedExpiry &&
+      Date.now() > parseInt(savedExpiry)
+    ) {
+      setPackageType("free");
+      localStorage.setItem("packageType", "free");
+      localStorage.removeItem("packageExpiresAt");
+      toast("🎫 Your premium package has expired.");
+    } else {
+      setPackageType(savedPackage);
+    }
 
     if (savedSpinsDate !== todayStr()) {
       setSpinsUsed(0);
@@ -67,8 +85,6 @@ export default function Spin() {
     } else {
       setSpinsUsed(savedSpinsUsed);
     }
-
-    setPackageType(savedPackage);
   }, []);
 
   useEffect(() => {
@@ -109,7 +125,6 @@ export default function Spin() {
     setBalance(newBalance);
     localStorage.setItem("tapCoins", newBalance);
 
-    // 🔁 Sync with backend
     const telegramId = localStorage.getItem("telegramId");
     if (telegramId) {
       try {
@@ -133,8 +148,18 @@ export default function Spin() {
       return;
     }
 
+    const isUpgrade =
+      Object.keys(PACKAGES).indexOf(pack) >
+      Object.keys(PACKAGES).indexOf(packageType);
+
+    if (!isUpgrade && packageType !== "free") {
+      toast.error("❌ You can't downgrade your package.");
+      return;
+    }
+
     try {
-      const recipientAddress = "UQAha8bIACCx0y6PKFDrId_375lnlQVMMGotdZ81N812axgU";
+      const recipientAddress =
+        "UQAha8bIACCx0y6PKFDrId_375lnlQVMMGotdZ81N812axgU";
       const nanoTON = (parseFloat(PACKAGES[pack].priceTON) * 1e9).toString();
 
       await tonConnectUI.sendTransaction({
@@ -142,11 +167,22 @@ export default function Spin() {
         messages: [{ address: recipientAddress, amount: nanoTON }],
       });
 
+      const expiryDate = Date.now() + SIX_MONTHS_MS;
+
       setPackageType(pack);
       setSpinsUsed(0);
       localStorage.setItem("packageType", pack);
       localStorage.setItem("spinsUsed", "0");
       localStorage.setItem("spinsDate", todayStr());
+      localStorage.setItem("packageExpiresAt", expiryDate.toString());
+
+      const telegramId = localStorage.getItem("telegramId");
+      if (telegramId) {
+        await updateUser(telegramId, {
+          packageType: pack,
+          packageExpiresAt: new Date(expiryDate),
+        });
+      }
 
       toast.success(
         <>
@@ -168,7 +204,9 @@ export default function Spin() {
           <TonConnectButton />
         </div>
 
-        <h1 className="text-3xl font-bold text-yellow-400 mb-4">🎡 Spin & Earn</h1>
+        <h1 className="text-3xl font-bold text-yellow-400 mb-4">
+          🎡 Spin & Earn
+        </h1>
 
         <div className="text-lg mb-4">
           <FontAwesomeIcon icon={faCoins} className="text-yellow-400 mr-2" />
@@ -177,7 +215,10 @@ export default function Spin() {
 
         <div className="mb-2">
           Package:{" "}
-          <span className="text-yellow-400 font-semibold capitalize">{packageType}</span> | Spins used today: {spinsUsed} / {PACKAGE_SPINS[packageType] || 1}
+          <span className="text-yellow-400 font-semibold capitalize">
+            {packageType}
+          </span>{" "}
+          | Spins used today: {spinsUsed} / {PACKAGE_SPINS[packageType] || 1}
         </div>
 
         <div className="w-[300px] sm:w-[320px] max-w-[90vw] mb-6">
@@ -262,10 +303,18 @@ export default function Spin() {
                   silver: "#c0c0c0",
                   gold: "#ffd700",
                 };
+                const isDisabled =
+                  !tonConnectUI.connected ||
+                  Object.keys(PACKAGES).indexOf(key) <=
+                    Object.keys(PACKAGES).indexOf(packageType);
                 return (
                   <li key={key} className="flex justify-between items-center">
                     <div className="flex items-center space-x-2">
-                      <FontAwesomeIcon icon={faMedal} style={{ color: medalColors[key] }} size="lg" />
+                      <FontAwesomeIcon
+                        icon={faMedal}
+                        style={{ color: medalColors[key] }}
+                        size="lg"
+                      />
                       <span className="font-semibold">{pack.label}</span>
                       <span className="flex items-center ml-4 text-yellow-400">
                         <FontAwesomeIcon icon={faRepeat} className="mr-1" />
@@ -278,9 +327,11 @@ export default function Spin() {
                     </div>
                     <button
                       onClick={() => handleBuyPackage(key)}
-                      disabled={!tonConnectUI.connected}
+                      disabled={isDisabled}
                       className={`px-4 py-1 rounded-full font-bold text-sm flex items-center ${
-                        tonConnectUI.connected ? "bg-green-600 hover:bg-green-700" : "bg-gray-600 cursor-not-allowed"
+                        !isDisabled
+                          ? "bg-green-600 hover:bg-green-700"
+                          : "bg-gray-600 cursor-not-allowed"
                       }`}
                     >
                       Buy
