@@ -17,6 +17,13 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { updateUser } from "../api/userApi";
 
+// Format numbers with k/M suffixes
+const formatCoins = (num) => {
+  if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + "M";
+  if (num >= 1_000) return (num / 1_000).toFixed(1) + "k";
+  return num.toString();
+};
+
 const data = [
   { option: "+0", style: { backgroundColor: "#7c3aed", textColor: "white" } },
   { option: "+10", style: { backgroundColor: "#9333ea", textColor: "white" } },
@@ -64,7 +71,6 @@ export default function Spin() {
     const savedSpinsDate = localStorage.getItem("spinsDate");
     const savedExpiry = localStorage.getItem("packageExpiresAt");
 
-    // Check for expiration
     if (
       savedPackage !== "free" &&
       savedExpiry &&
@@ -137,7 +143,7 @@ export default function Spin() {
     toast.success(
       <>
         <FontAwesomeIcon icon={faCoins} className="mr-2" />
-        +{rewardAmount} Coins added!
+        +{formatCoins(rewardAmount)} Coins added!
       </>
     );
   };
@@ -210,7 +216,7 @@ export default function Spin() {
 
         <div className="text-lg mb-4">
           <FontAwesomeIcon icon={faCoins} className="text-yellow-400 mr-2" />
-          Balance: <span className="text-yellow-400">{balance}</span>
+          Balance: <span className="text-yellow-400">{formatCoins(balance)}</span>
         </div>
 
         <div className="mb-2">
