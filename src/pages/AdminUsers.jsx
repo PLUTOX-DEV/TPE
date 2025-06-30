@@ -9,9 +9,18 @@ import {
   faEye,
   faSave,
   faDownload,
+  faCoins,
+  faUser,
 } from "@fortawesome/free-solid-svg-icons";
 
-// ✅ CSV Export Helper
+// ✅ Format coin values to "k"/"M"
+const formatCoins = (num) => {
+  if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + "M";
+  if (num >= 1_000) return (num / 1_000).toFixed(1) + "k";
+  return num;
+};
+
+// ✅ Export users as CSV
 const exportToCSV = (users) => {
   const headers = ["Telegram ID", "Username", "Full Name", "Balance", "VIP"];
   const rows = users.map((u) => [
@@ -40,7 +49,10 @@ export default function AdminUsers() {
 
   useEffect(() => {
     fetchUsers()
-      .then(setUsers)
+      .then((res) => {
+        const sorted = res.sort((a, b) => (b.balance || 0) - (a.balance || 0));
+        setUsers(sorted);
+      })
       .catch((err) => toast.error(err.message));
   }, []);
 
@@ -49,7 +61,7 @@ export default function AdminUsers() {
     try {
       await deleteUser(id);
       toast.success("User deleted");
-      setUsers(users.filter((u) => u._id !== id));
+      setUsers((prev) => prev.filter((u) => u._id !== id));
     } catch (err) {
       toast.error(err.message);
     }
@@ -77,7 +89,9 @@ export default function AdminUsers() {
       });
       toast.success("User updated");
       setUsers((prev) =>
-        prev.map((u) => (u._id === updatedUser._id ? updatedUser : u))
+        [...prev.map((u) => (u._id === updatedUser._id ? updatedUser : u))].sort(
+          (a, b) => (b.balance || 0) - (a.balance || 0)
+        )
       );
       setSelectedUser(updatedUser);
     } catch (err) {
@@ -89,10 +103,11 @@ export default function AdminUsers() {
 
   return (
     <div className="bg-black text-white min-h-screen p-4 md:p-10">
-      {/* Header and Export */}
+      {/* Header */}
       <div className="flex justify-between items-center flex-wrap mb-6 gap-4">
-        <h1 className="text-2xl md:text-3xl font-bold text-center">
-          Admin Dashboard - Users
+        <h1 className="text-2xl md:text-3xl font-bold text-yellow-400">
+          <FontAwesomeIcon icon={faUser} className="mr-2" />
+          Admin - User Management
         </h1>
         <button
           onClick={() => exportToCSV(users)}
@@ -104,7 +119,7 @@ export default function AdminUsers() {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto border border-gray-700 rounded-lg">
+      <div className="overflow-x-auto border border-gray-800 rounded-lg">
         <table className="w-full table-auto text-sm">
           <thead className="bg-gray-900 text-gray-300">
             <tr>
@@ -124,7 +139,10 @@ export default function AdminUsers() {
               >
                 <td className="p-2">{u.telegramId}</td>
                 <td className="p-2">{u.username || "—"}</td>
-                <td className="p-2">{u.balance ?? 0}</td>
+                <td className="p-2 text-yellow-300 font-semibold">
+                  <FontAwesomeIcon icon={faCoins} className="mr-1 text-yellow-400" />
+                  {formatCoins(u.balance ?? 0)}
+                </td>
                 <td className="p-2 text-center">
                   {u.isVIP ? (
                     <FontAwesomeIcon icon={faCrown} className="text-yellow-400" />
@@ -161,9 +179,9 @@ export default function AdminUsers() {
               <FontAwesomeIcon icon={faTimes} />
             </button>
 
-            <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-yellow-400">
               <FontAwesomeIcon icon={faEye} />
-              User Info
+              Edit User Info
             </h2>
 
             <div className="space-y-4 text-sm">
