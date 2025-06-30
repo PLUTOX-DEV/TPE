@@ -70,7 +70,7 @@ export default function Home() {
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [stamina, hasTapBot, loadingUser]);
+  }, [stamina, hasTapBot, loadingUser, handleTap]);
 
   // Tap handler function (manual or bot)
   const handleTap = useCallback(
@@ -139,7 +139,9 @@ export default function Home() {
               Multiplier: <span className="font-bold">×{multiplier}</span>
             </div>
             <div className="text-blue-400">
-              Stamina: <span className="font-bold">{stamina} / {maxStamina}</span>
+              Stamina: <span className="font-bold">
+                {stamina} / {maxStamina}
+              </span>
             </div>
           </div>
         </div>
