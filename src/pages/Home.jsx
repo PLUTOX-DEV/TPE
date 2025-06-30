@@ -1,9 +1,9 @@
-import React, { useContext, useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import coinImg from "../assets/image.jpg";
-import { StaminaContext } from "../context/StaminaContext";
-import { UserContext } from "../context/UserContext";
-import toast from "react-hot-toast";
 import { getUser, updateUser } from "../api/userApi";
+import toast from "react-hot-toast";
+import { useContext } from "react";
+import { StaminaContext } from "../context/StaminaContext";
 
 const formatCoins = (num) => {
   if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + "M";
@@ -13,44 +13,38 @@ const formatCoins = (num) => {
 
 export default function Home() {
   const { stamina, setStamina, maxStamina } = useContext(StaminaContext);
-  const { user, setUser, loadingUser, setLoadingUser } = useContext(UserContext);
 
-  const [tapping, setTapping] = useState(false);
+  const [user, setUser] = useState(null);
   const [coins, setCoins] = useState(0);
+  const [loadingUser, setLoadingUser] = useState(true);
+  const [tapping, setTapping] = useState(false);
 
-  const multiplier = user?.multiplier || 1;
-  const hasTapBot = user?.hasTapBot || false;
-  const isVIP = user?.isVIP || false;
   const telegramId = localStorage.getItem("telegramId");
 
-  // Fetch fresh user data and sync state + localStorage
-  const fetchUserData = useCallback(async () => {
-    if (!telegramId) return;
-    try {
-      setLoadingUser(true);
-      const freshUser = await getUser(telegramId);
-      setUser(freshUser);
-      setCoins(freshUser.balance || 0);
-      localStorage.setItem("tapCoins", (freshUser.balance || 0).toString());
-    } catch (err) {
-      console.error("Failed to refresh user data:", err);
-    } finally {
-      setLoadingUser(false);
-    }
-  }, [telegramId, setLoadingUser, setUser]);
-
+  // Fetch user once on mount
   useEffect(() => {
-    fetchUserData();
-  }, [fetchUserData]);
+    const fetchUser = async () => {
+      if (!telegramId) {
+        setLoadingUser(false);
+        return;
+      }
+      try {
+        setLoadingUser(true);
+        const fetchedUser = await getUser(telegramId);
+        setUser(fetchedUser);
+        setCoins(fetchedUser.balance || 0);
+        localStorage.setItem("tapCoins", (fetchedUser.balance || 0).toString());
+      } catch (err) {
+        console.error("Failed to fetch user:", err);
+      } finally {
+        setLoadingUser(false);
+      }
+    };
 
-  // Sync coins state if user.balance changes externally
-  useEffect(() => {
-    if (user) {
-      setCoins(user.balance || 0);
-    }
-  }, [user]);
+    fetchUser();
+  }, [telegramId]);
 
-  // First time welcome toast
+  // Show welcome toast once
   useEffect(() => {
     const isNew = localStorage.getItem("isNewUser");
     if (!isNew) {
@@ -59,7 +53,11 @@ export default function Home() {
     }
   }, []);
 
-  // Auto tap bot: tap every 3 seconds if stamina available
+  const multiplier = user?.multiplier || 1;
+  const hasTapBot = user?.hasTapBot || false;
+  const isVIP = user?.isVIP || false;
+
+  // Auto tap bot every 3 seconds if active
   useEffect(() => {
     if (!hasTapBot || loadingUser) return;
 
@@ -70,49 +68,44 @@ export default function Home() {
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [stamina, hasTapBot, loadingUser, handleTap]);
+  }, [stamina, hasTapBot, loadingUser]);
 
-  // Tap handler function (manual or bot)
-  const handleTap = useCallback(
-    async (isBot = false) => {
-      if (tapping || stamina <= 0 || loadingUser) {
-        if (!isBot) toast.error("⚡ You're out of stamina!");
-        return;
+  const handleTap = async (isBot = false) => {
+    if (tapping || stamina <= 0 || loadingUser) {
+      if (!isBot) toast.error("⚡ You're out of stamina!");
+      return;
+    }
+
+    if (!isBot) setTapping(true);
+
+    const earned = multiplier;
+    const newTotal = coins + earned;
+
+    setTimeout(async () => {
+      setCoins(newTotal);
+      setStamina((prev) => {
+        const updated = Math.max(0, prev - 1);
+        localStorage.setItem("stamina", updated);
+        return updated;
+      });
+
+      if (telegramId) {
+        try {
+          await updateUser(telegramId, { balance: newTotal, isVIP });
+          // Optionally refetch user here if you want backend freshness:
+          // const refreshedUser = await getUser(telegramId);
+          // setUser(refreshedUser);
+        } catch (err) {
+          console.error("Failed to update user balance:", err);
+        }
       }
 
-      if (!isBot) setTapping(true);
-
-      const earned = multiplier;
-      const newTotal = coins + earned;
-
-      // Use a small delay for animation effect
-      setTimeout(async () => {
-        setCoins(newTotal);
-        setStamina((prev) => {
-          const updated = Math.max(0, prev - 1);
-          localStorage.setItem("stamina", updated);
-          return updated;
-        });
-
-        if (telegramId) {
-          try {
-            // Update backend user balance and VIP status
-            await updateUser(telegramId, { balance: newTotal, isVIP });
-            // Fetch fresh user data to keep UI in sync with backend
-            await fetchUserData();
-          } catch (err) {
-            console.error("Failed to sync balance:", err);
-          }
-        }
-
-        if (!isBot) {
-          toast.success(`+${earned} 🪙`);
-          setTapping(false);
-        }
-      }, 200);
-    },
-    [coins, stamina, tapping, loadingUser, multiplier, telegramId, isVIP, fetchUserData, setStamina]
-  );
+      if (!isBot) {
+        toast.success(`+${earned} 🪙`);
+        setTapping(false);
+      }
+    }, 200);
+  };
 
   if (loadingUser) {
     return (
@@ -139,9 +132,7 @@ export default function Home() {
               Multiplier: <span className="font-bold">×{multiplier}</span>
             </div>
             <div className="text-blue-400">
-              Stamina: <span className="font-bold">
-                {stamina} / {maxStamina}
-              </span>
+              Stamina: <span className="font-bold">{stamina} / {maxStamina}</span>
             </div>
           </div>
         </div>
