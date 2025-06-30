@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import coinImg from "../assets/image.jpg";
-import { getUser, updateUser } from "../api/userApi";
-import toast from "react-hot-toast";
-import { useContext } from "react";
 import { StaminaContext } from "../context/StaminaContext";
+import toast from "react-hot-toast";
+import { getUser, updateUser } from "../api/userApi";
 
+// Format numbers with k, M suffixes
 const formatCoins = (num) => {
   if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + "M";
   if (num >= 1_000) return (num / 1_000).toFixed(1) + "k";
@@ -14,75 +14,80 @@ const formatCoins = (num) => {
 export default function Home() {
   const { stamina, setStamina, maxStamina } = useContext(StaminaContext);
 
-  const [user, setUser] = useState(null);
   const [coins, setCoins] = useState(0);
-  const [loadingUser, setLoadingUser] = useState(true);
   const [tapping, setTapping] = useState(false);
+  const [regenSpeed, setRegenSpeed] = useState(10000);
+  const [multiplier, setMultiplier] = useState(1);
+  const [hasTapBot, setHasTapBot] = useState(false);
+  const [isVIP, setIsVIP] = useState(false);
 
   const telegramId = localStorage.getItem("telegramId");
 
-  // Fetch user once on mount
   useEffect(() => {
-    const fetchUser = async () => {
-      if (!telegramId) {
-        setLoadingUser(false);
-        return;
-      }
+    const loadUser = async () => {
+      if (!telegramId) return;
+
       try {
-        setLoadingUser(true);
-        const fetchedUser = await getUser(telegramId);
-        setUser(fetchedUser);
-        setCoins(fetchedUser.balance || 0);
-        localStorage.setItem("tapCoins", (fetchedUser.balance || 0).toString());
+        const user = await getUser(telegramId);
+
+        setCoins(user.balance || 0);
+        setMultiplier(user.multiplier || 1);
+        setRegenSpeed(user.staminaRegenSpeed || 10000);
+        setHasTapBot(user.hasTapBot || false);
+        setIsVIP(user.isVIP || false);
+
+        localStorage.setItem("tapCoins", user.balance || 0);
+        localStorage.setItem("tapMultiplier", user.multiplier || 1);
+        localStorage.setItem("staminaRegenSpeed", user.staminaRegenSpeed || 10000);
+        localStorage.setItem("hasTapBot", user.hasTapBot ? "true" : "false");
+        localStorage.setItem("isVIP", user.isVIP || false);
       } catch (err) {
-        console.error("Failed to fetch user:", err);
-      } finally {
-        setLoadingUser(false);
+        console.error("❌ Failed to fetch user from backend:", err);
+
+        setCoins(parseInt(localStorage.getItem("tapCoins")) || 0);
+        setRegenSpeed(parseInt(localStorage.getItem("staminaRegenSpeed")) || 10000);
+        setMultiplier(parseInt(localStorage.getItem("tapMultiplier")) || 1);
+        setHasTapBot(localStorage.getItem("hasTapBot") === "true");
       }
     };
 
-    fetchUser();
+    loadUser();
   }, [telegramId]);
 
-  // Show welcome toast once
+  // Show welcome message once
   useEffect(() => {
-    const isNew = localStorage.getItem("isNewUser");
-    if (!isNew) {
-      toast.success("👋 Welcome to Nakabozoz Tap & Earn!", { duration: 5000 });
+    const isFirstVisit = localStorage.getItem("isNewUser");
+    if (!isFirstVisit) {
+      toast.success("👋 Welcome to Nakabozoz Tap & Earn!", {
+        duration: 5000,
+      });
       localStorage.setItem("isNewUser", "false");
     }
   }, []);
 
-  const multiplier = user?.multiplier || 1;
-  const hasTapBot = user?.hasTapBot || false;
-  const isVIP = user?.isVIP || false;
-
-  // Auto tap bot every 3 seconds if active
+  // Auto tap bot effect
   useEffect(() => {
-    if (!hasTapBot || loadingUser) return;
-
+    if (!hasTapBot) return;
     const interval = setInterval(() => {
-      if (stamina > 0) {
-        handleTap(true).catch(console.error);
-      }
+      if (stamina > 0) handleTap(true);
     }, 3000);
-
     return () => clearInterval(interval);
-  }, [stamina, hasTapBot, loadingUser]);
+  }, [stamina, hasTapBot]);
 
   const handleTap = async (isBot = false) => {
-    if (tapping || stamina <= 0 || loadingUser) {
+    if (tapping || stamina <= 0) {
       if (!isBot) toast.error("⚡ You're out of stamina!");
       return;
     }
 
     if (!isBot) setTapping(true);
-
     const earned = multiplier;
     const newTotal = coins + earned;
 
     setTimeout(async () => {
       setCoins(newTotal);
+      localStorage.setItem("tapCoins", newTotal);
+
       setStamina((prev) => {
         const updated = Math.max(0, prev - 1);
         localStorage.setItem("stamina", updated);
@@ -92,29 +97,15 @@ export default function Home() {
       if (telegramId) {
         try {
           await updateUser(telegramId, { balance: newTotal, isVIP });
-          // Optionally refetch user here if you want backend freshness:
-          // const refreshedUser = await getUser(telegramId);
-          // setUser(refreshedUser);
         } catch (err) {
-          console.error("Failed to update user balance:", err);
+          console.error("❌ Backend sync failed:", err);
         }
       }
 
-      if (!isBot) {
-        toast.success(`+${earned} 🪙`);
-        setTapping(false);
-      }
+      if (!isBot) toast.success(`+${earned} 🪙`);
+      if (!isBot) setTapping(false);
     }, 200);
   };
-
-  if (loadingUser) {
-    return (
-      <div className="flex justify-center items-center min-h-screen bg-black text-white text-xl">
-        <div className="animate-spin border-4 border-yellow-400 border-t-transparent rounded-full w-12 h-12 mr-3"></div>
-        Loading profile...
-      </div>
-    );
-  }
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[90vh] px-4 bg-gradient-to-b from-black via-gray-900 to-black text-white">
@@ -132,11 +123,15 @@ export default function Home() {
               Multiplier: <span className="font-bold">×{multiplier}</span>
             </div>
             <div className="text-blue-400">
-              Stamina: <span className="font-bold">{stamina} / {maxStamina}</span>
+              Stamina:{" "}
+              <span className="font-bold">
+                {stamina} / {maxStamina}
+              </span>
             </div>
           </div>
         </div>
 
+        {/* Stamina bar */}
         <div className="w-full bg-gray-800 rounded-full h-4 mb-8 overflow-hidden shadow-inner">
           <div
             className="bg-yellow-400 h-full transition-all duration-500 ease-in-out"
@@ -144,6 +139,7 @@ export default function Home() {
           />
         </div>
 
+        {/* Tap button */}
         <button
           onClick={() => handleTap(false)}
           disabled={tapping || stamina <= 0}
@@ -154,11 +150,20 @@ export default function Home() {
               : "hover:scale-110 active:scale-90 shadow-yellow-400"
           }`}
         >
-          <img src={coinImg} alt="Tap Coin" className="w-full h-full object-cover rounded-full" />
+          <img
+            src={coinImg}
+            alt="Tap Coin"
+            className={`w-full h-full object-cover rounded-full ${
+              tapping ? "animate-pingOnce" : ""
+            }`}
+          />
+          {/* Glow pulse */}
           <span className="absolute inset-0 rounded-full bg-yellow-400 opacity-20 animate-pulse" />
         </button>
 
-        <p className="mt-5 text-gray-400 tracking-wide select-none">Tap the coin to earn tokens!</p>
+        <p className="mt-5 text-gray-400 tracking-wide select-none">
+          Tap the coin to earn tokens!
+        </p>
       </div>
     </div>
   );
