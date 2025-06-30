@@ -164,9 +164,9 @@ export default function Spin() {
     }
 
     try {
-      const recipientAddress =
-        "UQAha8bIACCx0y6PKFDrId_375lnlQVMMGotdZ81N812axgU";
-      const nanoTON = (parseFloat(PACKAGES[pack].priceTON) * 1e9).toString();
+      const recipientAddress = "UQAha8bIACCx0y6PKFDrId_375lnlQVMMGotdZ81N812axgU";
+      const nanoTON = Math.round(parseFloat(PACKAGES[pack].priceTON) * 1e9).toString(); // ✅ Corrected
+      console.log(`Sending ${nanoTON} nanoTON for package ${pack}`);
 
       await tonConnectUI.sendTransaction({
         validUntil: Math.floor(Date.now() / 1000) + 360,
@@ -287,7 +287,6 @@ export default function Spin() {
         )}
       </div>
 
-      {/* Premium Modal */}
       {showPremium && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-[#111] p-6 rounded-xl text-white max-w-sm w-full text-center">
