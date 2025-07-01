@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { getUser, updateUser, buyTapBot } from "../api/userApi";
 import toast from "react-hot-toast";
 
+// Format coins with suffix
 const formatNumber = (num) => {
   if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + "M";
   if (num >= 1_000) return (num / 1_000).toFixed(1) + "k";
@@ -98,8 +99,17 @@ export default function Store() {
 
   if (loading) {
     return (
-      <div className="text-white text-center mt-10">
-        <p>Loading Store...</p>
+      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-4 py-10">
+        <div className="animate-pulse space-y-6 w-full max-w-sm">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="bg-white/10 rounded-xl border border-yellow-500/20 h-24 w-full"
+            ></div>
+          ))}
+          <div className="h-4 w-24 bg-yellow-400 rounded-full animate-pulse mt-8 mx-auto" />
+          <p className="text-gray-400 text-sm text-center mt-4">Loading Store...</p>
+        </div>
       </div>
     );
   }
