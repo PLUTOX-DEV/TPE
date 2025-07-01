@@ -24,7 +24,7 @@ const TASKS = [
   },
   {
     id: 6,
-    action: "Follow AlI on X",
+    action: "Follow ALI on X",
     reward: 500000,
     icon: faTwitter,
     link: "https://x.com/ali_inweb3?s=21", // Replace with your real Twitter list URL
