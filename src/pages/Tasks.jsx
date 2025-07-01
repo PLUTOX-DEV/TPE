@@ -9,13 +9,11 @@ import { faTwitter, faTelegram } from "@fortawesome/free-brands-svg-icons";
 import toast from "react-hot-toast";
 import { getUser, updateUser } from "../api/userApi";
 
-// Format number to show "k" for thousands
 const formatReward = (amount) => {
   if (amount >= 1000) return `${(amount / 1000).toFixed(0)}k`;
   return amount;
 };
 
-// Task definitions
 const TASKS = [
   {
     id: 1,
@@ -23,6 +21,13 @@ const TASKS = [
     reward: 500000,
     icon: faTwitter,
     link: "https://x.com/Nakabozoz_base?t=OH7zyvR1Yu12kReFRCKqdg&s=09",
+  },
+  {
+    id: 6,
+    action: "Follow AlI on X",
+    reward: 500000,
+    icon: faTwitter,
+    link: "https://x.com/ali_inweb3?s=21", // Replace with your real Twitter list URL
   },
   {
     id: 3,

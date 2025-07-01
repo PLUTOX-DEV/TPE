@@ -7,6 +7,7 @@ import { loginUser } from "./api/userApi";
 
 // Admin - eagerly loaded
 import AdminUsers from "./pages/AdminUsers";
+// import Allocation from "./pages/Allocation"
 
 // Lazy-loaded user-facing pages
 const Home = lazy(() => import("./pages/Home"));
@@ -80,6 +81,7 @@ export default function App() {
 
           {/* Admin Page */}
           <Route path="/admin" element={<AdminUsers />} />
+          {/* <Route path="/allocation" element={<Allocation />} /> */}
 
           {/* 404 fallback */}
           <Route path="*" element={<NotFound />} />

@@ -4,12 +4,26 @@ import { StaminaContext } from "../context/StaminaContext";
 import toast from "react-hot-toast";
 import { getUser, updateUser } from "../api/userApi";
 
-// Format number
+// Format number with k/M
 const formatCoins = (num) => {
   if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + "M";
   if (num >= 1_000) return (num / 1_000).toFixed(1) + "k";
   return num.toString();
 };
+
+// OpenSea icon SVG
+const OpenSeaIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="28"
+    height="28"
+    viewBox="0 0 512 512"
+    fill="currentColor"
+    className="text-white hover:text-blue-400 transition duration-300"
+  >
+    <path d="M256 0C114.836 0 0 114.837 0 256s114.836 256 256 256c141.163 0 256-114.837 256-256S397.163 0 256 0zm2.406 82.656c96.136-.555 174.594 77.301 174.063 172.469-.531 95.167-78.536 173.687-173.703 173.156-95.167-.531-173.687-78.536-173.156-173.703.531-95.167 78.536-173.687 173.797-171.922zm9.688 71.875-9.938 13.5c7.385 5.078 14.146 10.844 20.063 17.188 22.667 24.073 34.146 55.589 34.375 93.25l39.219.313-48.531 46.875-47.781-47.594 32.25-.25c-.208-30.918-8.578-55.291-25.063-73.344-6.094-6.469-13.333-12.042-21.625-16.5l-17.531 23.344-31.594-38.281z" />
+  </svg>
+);
 
 export default function Home() {
   const { stamina, setStamina, maxStamina } = useContext(StaminaContext);
@@ -35,7 +49,6 @@ export default function Home() {
       setHasTapBot(user.hasTapBot || false);
       setIsVIP(user.isVIP || false);
 
-      // sync to local storage
       localStorage.setItem("tapCoins", user.balance || 0);
       localStorage.setItem("tapMultiplier", user.multiplier || 1);
       localStorage.setItem("staminaRegenSpeed", user.staminaRegenSpeed || 10000);
@@ -44,7 +57,6 @@ export default function Home() {
     } catch (err) {
       console.error("❌ Failed to fetch user:", err);
 
-      // fallback from localStorage
       setCoins(parseInt(localStorage.getItem("tapCoins")) || 0);
       setMultiplier(parseInt(localStorage.getItem("tapMultiplier")) || 1);
       setRegenSpeed(parseInt(localStorage.getItem("staminaRegenSpeed")) || 10000);
@@ -57,7 +69,7 @@ export default function Home() {
     fetchUser();
   }, []);
 
-  // Welcome message (only first visit)
+  // Welcome message (once per user)
   useEffect(() => {
     const isFirst = localStorage.getItem("isNewUser");
     if (!isFirst) {
@@ -66,7 +78,7 @@ export default function Home() {
     }
   }, []);
 
-  // Auto Tap Bot effect
+  // Auto Tap Bot
   useEffect(() => {
     if (!hasTapBot) return;
     const interval = setInterval(() => {
@@ -89,14 +101,12 @@ export default function Home() {
       setCoins(newTotal);
       localStorage.setItem("tapCoins", newTotal);
 
-      // Reduce stamina
       setStamina((prev) => {
         const updated = Math.max(0, prev - 1);
         localStorage.setItem("stamina", updated);
         return updated;
       });
 
-      // Update backend
       if (telegramId) {
         try {
           await updateUser(telegramId, { balance: newTotal, isVIP });
@@ -113,7 +123,19 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[90vh] px-4 bg-gradient-to-b from-black via-gray-900 to-black text-white">
+    <div className="relative flex flex-col items-center justify-center min-h-[90vh] px-4 bg-gradient-to-b from-black via-gray-900 to-black text-white">
+      
+      {/* OpenSea Icon Top-Left */}
+      <a
+        href="https://opensea.io/collection/nakabozoz-1"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="absolute top-4 left-4 z-50"
+        aria-label="View on OpenSea"
+      >
+        <OpenSeaIcon />
+      </a>
+
       <div className="bg-white/10 border border-yellow-500/40 backdrop-blur-lg p-8 rounded-3xl shadow-2xl w-full max-w-sm text-center relative">
         <h1 className="text-4xl font-extrabold mb-5 tracking-wider text-yellow-400 drop-shadow-lg">
           🚀 Tap & Earn
@@ -121,7 +143,9 @@ export default function Home() {
 
         <div className="mb-6 space-y-2 text-lg font-semibold">
           <p className="text-gray-300">Balance</p>
-          <p className="text-4xl text-yellow-300 drop-shadow-lg">{formatCoins(coins)} 🪙</p>
+          <p className="text-4xl text-yellow-300 drop-shadow-lg">
+            {formatCoins(coins)} 🪙
+          </p>
 
           <div className="flex justify-center gap-8 mt-3 text-sm font-medium">
             <div className="text-green-400">
