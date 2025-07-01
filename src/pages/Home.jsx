@@ -4,7 +4,7 @@ import { StaminaContext } from "../context/StaminaContext";
 import toast from "react-hot-toast";
 import { getUser, updateUser } from "../api/userApi";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faOpensea } from "@fortawesome/free-brands-svg-icons";
+import { faLink } from "@fortawesome/free-solid-svg-icons";
 
 // Format number
 const formatCoins = (num) => {
@@ -59,7 +59,6 @@ export default function Home() {
     fetchUser();
   }, []);
 
-  // Welcome message (only first visit)
   useEffect(() => {
     const isFirst = localStorage.getItem("isNewUser");
     if (!isFirst) {
@@ -68,7 +67,6 @@ export default function Home() {
     }
   }, []);
 
-  // Auto Tap Bot effect
   useEffect(() => {
     if (!hasTapBot) return;
     const interval = setInterval(() => {
@@ -91,14 +89,12 @@ export default function Home() {
       setCoins(newTotal);
       localStorage.setItem("tapCoins", newTotal);
 
-      // Reduce stamina
       setStamina((prev) => {
         const updated = Math.max(0, prev - 1);
         localStorage.setItem("stamina", updated);
         return updated;
       });
 
-      // Update backend
       if (telegramId) {
         try {
           await updateUser(telegramId, { balance: newTotal, isVIP });
@@ -116,16 +112,15 @@ export default function Home() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[90vh] px-4 bg-gradient-to-b from-black via-gray-900 to-black text-white relative">
-      
-      {/* Top-right OpenSea icon with hover and tooltip */}
+      {/* OpenSea Icon - Top Right */}
       <a
         href="https://opensea.io/collection/nakabozoz-1"
         target="_blank"
         rel="noopener noreferrer"
-        title="View on OpenSea"
-        className="absolute top-4 right-4 z-50 bg-white/10 p-3 rounded-full hover:bg-yellow-500 hover:text-black transition duration-300"
+        className="absolute top-4 right-4 text-yellow-400 hover:text-yellow-300 transition"
+        title="View Nakabozoz on OpenSea"
       >
-        <FontAwesomeIcon icon={faOpensea} className="text-2xl drop-shadow-lg" />
+        <FontAwesomeIcon icon={faLink} className="text-2xl drop-shadow-lg" />
       </a>
 
       <div className="bg-white/10 border border-yellow-500/40 backdrop-blur-lg p-8 rounded-3xl shadow-2xl w-full max-w-sm text-center relative">
