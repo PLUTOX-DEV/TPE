@@ -47,6 +47,8 @@ export default function Store() {
       setLoadingMultiplier(true);
       await updateAndRefresh({ multiplier: user.multiplier + 1, balance: user.balance - 50 });
       toast.success("🔥 Tap Multiplier upgraded!");
+    } catch (err) {
+      toast.error(err.message || "Failed to upgrade multiplier.");
     } finally {
       setLoadingMultiplier(false);
     }
@@ -62,6 +64,8 @@ export default function Store() {
         balance: user.balance - 80,
       });
       toast.success("⚡ Regen Speed improved!");
+    } catch (err) {
+      toast.error(err.message || "Failed to improve regen speed.");
     } finally {
       setLoadingRegen(false);
     }
@@ -75,6 +79,8 @@ export default function Store() {
       await buyTapBot(telegramId);
       toast.success("🤖 Tap Bot purchased!");
       fetchUser();
+    } catch (err) {
+      toast.error(err.message || "Failed to purchase Tap Bot.");
     } finally {
       setLoadingTapBot(false);
     }
@@ -87,7 +93,7 @@ export default function Store() {
       toast.success(response.message);
       fetchUser();
     } catch (err) {
-      toast.error(err?.response?.data?.message || "Refill failed.");
+      toast.error(err.message || "Refill failed.");
     } finally {
       setLoadingRefill(false);
     }
@@ -100,7 +106,7 @@ export default function Store() {
       toast.success(response.message);
       fetchUser();
     } catch (err) {
-      toast.error(err?.response?.data?.message || "Toggle failed.");
+      toast.error(err.message || "Toggle failed.");
     } finally {
       setLoadingToggle(false);
     }
@@ -113,7 +119,9 @@ export default function Store() {
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center px-4 py-10">
       <h1 className="text-3xl font-bold text-yellow-400 mb-6">🛍 Tapper Store</h1>
-      <p className="mb-6 text-lg">🪙 Coins: <span className="text-green-400">{formatNumber(user.balance)}</span></p>
+      <p className="mb-6 text-lg">
+        🪙 Coins: <span className="text-green-400">{formatNumber(user.balance)}</span>
+      </p>
 
       <div className="space-y-6 w-full max-w-sm">
         <UpgradeCard
@@ -138,12 +146,12 @@ export default function Store() {
 
         <UpgradeCard
           title="💧 Refill Stamina"
-          subtitle={`Used Today: ${user.tapBotToggleHistory?.count || 0} / 4`}
+          subtitle={`Used Today: ${user.staminaRefillsToday || 0} / 4`}
           onClick={handleRefillStamina}
-          cost={30}
+          cost={20}
           loading={loadingRefill}
-          disabled={(user.tapBotToggleHistory?.count || 0) >= 4 || user.balance < 30}
-          note={(user.tapBotToggleHistory?.count || 0) >= 4 ? "Daily limit reached" : null}
+          disabled={(user.staminaRefillsToday || 0) >= 4 || user.balance < 20}
+          note={(user.staminaRefillsToday || 0) >= 4 ? "Daily limit reached" : null}
         />
 
         <div className="bg-white/10 p-4 rounded-xl border border-yellow-500/20">
