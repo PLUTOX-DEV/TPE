@@ -15,7 +15,7 @@ import {
 import { getUser, claimReferral } from "../api/userApi";
 import toast from "react-hot-toast";
 
-// Format numbers like 1k, 1.5M, etc.
+// Format numbers like 1.5k or 2.1M
 const formatNumber = (num) => {
   if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + "M";
   if (num >= 1_000) return (num / 1_000).toFixed(1) + "k";
@@ -49,16 +49,20 @@ export default function Profile() {
       });
   }, [telegramId]);
 
-  const referralLink = `https://t.me/Nakabozoz_bot?start=${user?.username || "your_code"}`;
+  // What will be copied
+  const shareMessage = `🔥 Join this bot: https://t.me/Nakabozoz_bot\nUse my username: @${user?.username || "your_username"}\nJust send it as /start @${user?.username || "your_username"} to get started! 🚀`;
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(referralLink);
-    toast.success("Referral link copied!");
+    navigator.clipboard.writeText(shareMessage).then(() => {
+      toast.success("Referral message copied!");
+    }).catch(() => {
+      toast.error("Failed to copy message.");
+    });
   };
 
   const handleReferralClaim = async () => {
     if (!referralUsername.trim()) {
-      toast.error("Please enter a username.");
+      toast.error("Please enter a valid username.");
       return;
     }
 
@@ -67,10 +71,11 @@ export default function Profile() {
         telegramId,
         referrerUsername: referralUsername.trim(),
       });
+
       setUser(updatedUser);
       setHasClaimed(true);
       setReferralUsername("");
-      toast.success("Referral claimed! 🎉 You received 500,000 coins.");
+      toast.success("🎉 Referral claimed! You received 500,000 coins.");
     } catch (err) {
       toast.error(err.message);
     }
@@ -116,7 +121,7 @@ export default function Profile() {
           <p className="text-gray-400 text-sm italic">ID: {user?.telegramId}</p>
         </div>
 
-        {/* User Stats */}
+        {/* Stats */}
         <div className="space-y-5 text-base md:text-lg">
           <InfoRow icon={faCoins} label="Coin Balance" value={`${formatNumber(user.balance)} 🪙`} color="text-green-400" />
           <InfoRow icon={faRocket} label="Tap Multiplier" value={`x${user.multiplier || 1}`} color="text-purple-300" />
@@ -135,21 +140,30 @@ export default function Profile() {
           <InfoRow icon={faCoins} label="Referral Earnings" value={`${formatNumber(user.referralEarnings || 0)} 🪙`} color="text-yellow-300" />
         </div>
 
-        {/* Referral Link */}
+        {/* Copy Referral Instruction */}
         <div className="mt-8">
           <p className="text-yellow-400 mb-2 flex items-center font-semibold">
             <FontAwesomeIcon icon={faLink} className="mr-2" />
-            Share Your Referral Link
+            Invite Friends & Earn
           </p>
-          <div className="flex items-center gap-3 bg-gray-800 px-3 py-2 rounded-md text-white text-sm break-all select-all shadow-inner">
-            <code className="flex-1">{referralLink}</code>
-            <button onClick={handleCopy} title="Copy referral link" className="p-1 rounded-md hover:bg-yellow-500/70 transition">
-              <FontAwesomeIcon icon={faCopy} className="text-yellow-400 hover:text-yellow-300" />
+          <div className="bg-gray-800 px-3 py-3 rounded-md text-white text-sm shadow-inner">
+            <p>They must use this bot:</p>
+            <p className="text-yellow-300 font-bold mb-2">https://t.me/Nakabozoz_bot</p>
+            <p>Send your username:</p>
+            <p className="text-yellow-300 font-bold mb-2">@{user?.username || "your_username"}</p>
+            <p className="italic text-xs text-gray-300">Inupt the Referral code to the profile section <code> @{user?.username || "your_username"}</code></p>
+
+            <button
+              onClick={handleCopy}
+              className="mt-3 w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-2 rounded flex items-center justify-center gap-2"
+            >
+              <FontAwesomeIcon icon={faCopy} />
+              Copy Invite Message
             </button>
           </div>
         </div>
 
-        {/* Claim Referral Reward */}
+        {/* Claim Referral */}
         {!hasClaimed && (
           <div className="mt-8">
             <h3 className="text-yellow-300 font-bold mb-2">Claim Referral Reward</h3>
@@ -169,7 +183,7 @@ export default function Profile() {
           </div>
         )}
 
-        {/* Referrals List */}
+        {/* Referred Users */}
         {user.referrals?.length > 0 && (
           <div className="mt-8 max-h-40 overflow-y-auto">
             <h3 className="text-yellow-300 text-lg font-bold mb-3">Referred Users</h3>
