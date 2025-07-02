@@ -17,6 +17,7 @@ export const updateUser = async (telegramId, updates) => {
   if (!res.ok) throw new Error("Failed to update user");
   return await res.json();
 };
+
 // ✅ Buy Tap Bot
 export const buyTapBot = async (telegramId) => {
   const res = await fetch(`${BASE_URL}/buy-tap-bot`, {
@@ -33,7 +34,6 @@ export const buyTapBot = async (telegramId) => {
   return await res.json(); // returns updated user object
 };
 
-
 // ✅ Login or register user with referral
 export async function loginUser(userData) {
   try {
@@ -46,7 +46,7 @@ export async function loginUser(userData) {
         telegramId,
         username,
         fullName,
-        referrer, // ✅ match backend key
+        referrer,
       }),
     });
 
@@ -59,4 +59,32 @@ export async function loginUser(userData) {
     console.error("Login error:", err);
     throw err;
   }
-}
+};
+
+// ✅ Refill stamina (up to 4 times per day)
+export const refillStamina = async (telegramId) => {
+  const res = await fetch(`${BASE_URL}/refill-stamina`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ telegramId }),
+  });
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(errorData.message || "Failed to refill stamina");
+  }
+  return await res.json();
+};
+
+// ✅ Toggle Tap Bot activation (limit 4 times per day)
+export const toggleTapBot = async (telegramId) => {
+  const res = await fetch(`${BASE_URL}/toggle-tap-bot`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ telegramId }),
+  });
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(errorData.message || "Failed to toggle Tap Bot");
+  }
+  return await res.json();
+};
