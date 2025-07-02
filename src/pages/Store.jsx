@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { getUser, updateUser, buyTapBot } from "../api/userApi";
 import toast from "react-hot-toast";
 
-// Format coins with suffix
+// Format number with suffix
 const formatNumber = (num) => {
   if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + "M";
   if (num >= 1_000) return (num / 1_000).toFixed(1) + "k";
@@ -29,7 +29,7 @@ export default function Store() {
       setLoading(true);
       const user = await getUser(telegramId);
       setCoins(user.balance || 0);
-      setMultiplier(user.multiplier || 1);
+      setMultiplier(Math.min(user.multiplier || 1, 20)); // Enforce max 20
       setRegenSpeed(user.staminaRegenSpeed || 10000);
       setHasTapBot(user.hasTapBot || false);
     } catch (err) {
@@ -46,11 +46,12 @@ export default function Store() {
 
   const updateBalance = async (newBalance, extraUpdates = {}) => {
     await updateUser(telegramId, { balance: newBalance, ...extraUpdates });
-    fetchUser(); // Refresh after update
+    fetchUser();
   };
 
   const handleBuyMultiplier = async () => {
-    if (coins < 50) return toast.error("Not enough coins.");
+    if (multiplier >= 20) return toast("Max multiplier reached");
+    if (coins < 50) return toast.error("Not enough coins");
     const newMult = multiplier + 1;
     const newBalance = coins - 50;
 
@@ -66,7 +67,8 @@ export default function Store() {
   };
 
   const handleBuyRegen = async () => {
-    if (coins < 80) return toast.error("Not enough coins.");
+    if (regenSpeed <= 2000) return toast("Already at fastest regen speed!");
+    if (coins < 80) return toast.error("Not enough coins");
     const newSpeed = Math.max(2000, regenSpeed - 1000);
     const newBalance = coins - 80;
 
@@ -89,7 +91,7 @@ export default function Store() {
       setLoadingTapBot(true);
       await buyTapBot(telegramId);
       toast.success("🤖 Tap Bot purchased!");
-      fetchUser(); // Refresh info
+      fetchUser();
     } catch (err) {
       toast.error(err.message || "Failed to buy Tap Bot.");
     } finally {
@@ -128,16 +130,20 @@ export default function Store() {
           onClick={handleBuyMultiplier}
           cost={50}
           loading={loadingMultiplier}
-          disabled={coins < 50}
+          disabled={coins < 50 || multiplier >= 20}
+          note={multiplier >= 20 ? "Max level reached" : null}
         />
+
         <UpgradeCard
           title="⚡ Faster Stamina Regen"
           subtitle={`Current: ${(regenSpeed / 1000).toFixed(1)}s`}
           onClick={handleBuyRegen}
           cost={80}
           loading={loadingRegen}
-          disabled={coins < 80}
+          disabled={coins < 80 || regenSpeed <= 2000}
+          note={regenSpeed <= 2000 ? "Fastest regen reached" : null}
         />
+
         <div className="bg-white/10 p-4 rounded-xl border border-yellow-500/20">
           <p className="text-lg font-bold mb-1">🤖 Auto Tap Bot</p>
           <p className="text-sm mb-2">
@@ -169,11 +175,12 @@ export default function Store() {
   );
 }
 
-function UpgradeCard({ title, subtitle, onClick, cost, loading, disabled }) {
+function UpgradeCard({ title, subtitle, onClick, cost, loading, disabled, note }) {
   return (
     <div className="bg-white/10 p-4 rounded-xl border border-yellow-500/20">
       <p className="text-lg font-bold mb-1">{title}</p>
       <p className="text-sm mb-2">{subtitle}</p>
+      {note && <p className="text-yellow-400 text-xs mb-2">{note}</p>}
       <button
         onClick={onClick}
         disabled={loading || disabled}

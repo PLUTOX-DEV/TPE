@@ -27,7 +27,7 @@ const TASKS = [
     action: "Follow ALI on X",
     reward: 500000,
     icon: faTwitter,
-    link: "https://x.com/ali_inweb3?s=21", // Replace with your real Twitter list URL
+    link: "https://x.com/ali_inweb3?s=21",
   },
   {
     id: 3,
@@ -54,8 +54,7 @@ const TASKS = [
 
 export default function Tasks() {
   const [visitedTasks, setVisitedTasks] = useState(() => {
-    const saved = localStorage.getItem("visitedTasks");
-    return saved ? JSON.parse(saved) : {};
+    return JSON.parse(localStorage.getItem("visitedTasks")) || {};
   });
 
   const [claimedTasks, setClaimedTasks] = useState({});
@@ -73,6 +72,7 @@ export default function Tasks() {
         console.error("❌ Failed to fetch claimed tasks:", err);
       }
     };
+
     fetchUser();
   }, [telegramId]);
 
@@ -97,9 +97,9 @@ export default function Tasks() {
   const handleClaim = async (task) => {
     if (!visitedTasks[task.id] || claimedTasks[task.id]) return;
 
-    const updated = { ...claimedTasks, [task.id]: true };
-    setClaimedTasks(updated);
-    localStorage.setItem("claimedTasks", JSON.stringify(updated));
+    const updatedClaims = { ...claimedTasks, [task.id]: true };
+    setClaimedTasks(updatedClaims);
+    localStorage.setItem("claimedTasks", JSON.stringify(updatedClaims));
 
     const current = parseInt(localStorage.getItem("tapCoins")) || 0;
     const newBalance = current + task.reward;
@@ -110,7 +110,7 @@ export default function Tasks() {
     if (telegramId) {
       try {
         await updateUser(telegramId, {
-          claimedTasks: updated,
+          claimedTasks: updatedClaims,
           balance: newBalance,
         });
       } catch (err) {
@@ -149,7 +149,7 @@ export default function Tasks() {
                 </div>
               </div>
 
-              {/* Action Buttons */}
+              {/* Buttons */}
               <div className="flex gap-3 flex-wrap">
                 <button
                   onClick={() =>

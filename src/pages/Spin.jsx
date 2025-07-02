@@ -145,7 +145,7 @@ export default function Spin() {
 
     const price = PACKAGES[pack].priceTON;
     const nanoTON = BigInt(Math.round(parseFloat(price) * 1e9)).toString();
-    const rawRecipient = "UQAMHY5HLY1d5825GNGRD7_KwufvunFH27zIklPvzbao8D5M";
+    const rawRecipient = "UQDom__sNcPQZIaZZSqiP2JgFSzflrIE7CmdETmGBB94uvPi";
 
     let recipient;
     try {
