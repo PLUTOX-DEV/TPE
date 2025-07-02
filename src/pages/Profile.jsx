@@ -92,7 +92,7 @@ getUser(telegramId)
 
 // What will be copied
 
-const shareMessage = 🔥 Join this bot: https://t.me/Nakabozoz_bot\nUse my username: @${user?.username || "your_username"}\nJust send it as /start @${user?.username || "your_username"} to get started! 🚀;
+const shareMessage = '🔥 Join this bot: https://t.me/Nakabozoz_bot\nUse my username: @${user?.username || "your_username"}\nJust send it as /start @${user?.username || "your_username"} to get started! 🚀';
 
 const handleCopy = () => {
 
