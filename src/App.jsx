@@ -7,7 +7,6 @@ import { loginUser } from "./api/userApi";
 
 // Admin - eagerly loaded
 import AdminUsers from "./pages/AdminUsers";
-// import Allocation from "./pages/Allocation"
 
 // Lazy-loaded user-facing pages
 const Home = lazy(() => import("./pages/Home"));
@@ -34,24 +33,36 @@ const NotFound = () => (
 
 function InitTelegramUser() {
   useEffect(() => {
-    const tgUser = window?.Telegram?.WebApp?.initDataUnsafe?.user;
+    const tg = window?.Telegram?.WebApp;
+    if (!tg) {
+      console.warn("❌ Telegram WebApp not found.");
+      return;
+    }
 
-    if (!tgUser) {
-      console.warn("❌ Telegram WebApp user not found.");
+    const tgUser = tg.initDataUnsafe?.user;
+    const startParam = tg.initDataUnsafe?.start_param || null; // referral code
+
+    if (!tgUser || !tgUser.id) {
+      console.warn("❌ Telegram user info missing.");
       return;
     }
 
     const telegramId = tgUser.id.toString();
     const username = tgUser.username || "no_username";
-    const fullName = `${tgUser.first_name} ${tgUser.last_name || ""}`.trim();
+    const fullName = `${tgUser.first_name || ""} ${tgUser.last_name || ""}`.trim();
 
-    // Save to localStorage
+    // Save user info locally
     localStorage.setItem("telegramId", telegramId);
     localStorage.setItem("username", username);
     localStorage.setItem("fullName", fullName);
 
-    // Call backend to login or create user
-    loginUser({ telegramId, username, fullName }).catch((err) => {
+    // Call backend login or registration with referral
+    loginUser({
+      telegramId,
+      username,
+      fullName,
+      referrer: startParam,  // pass referral code here
+    }).catch((err) => {
       console.error("❌ Failed to login or create user:", err);
     });
   }, []);
@@ -65,7 +76,7 @@ export default function App() {
 
   return (
     <div className="bg-black text-white min-h-screen">
-      {/* ✅ Initializes Telegram User on Mini App load */}
+      {/* Initialize Telegram user and process referral */}
       <InitTelegramUser />
 
       <Suspense fallback={<Loading />}>
@@ -81,7 +92,6 @@ export default function App() {
 
           {/* Admin Page */}
           <Route path="/admin" element={<AdminUsers />} />
-          {/* <Route path="/allocation" element={<Allocation />} /> */}
 
           {/* 404 fallback */}
           <Route path="*" element={<NotFound />} />

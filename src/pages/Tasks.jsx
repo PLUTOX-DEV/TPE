@@ -9,6 +9,7 @@ import { faTwitter, faTelegram } from "@fortawesome/free-brands-svg-icons";
 import toast from "react-hot-toast";
 import { getUser, updateUser } from "../api/userApi";
 
+// Format reward amounts with k suffix
 const formatReward = (amount) => {
   if (amount >= 1000) return `${(amount / 1000).toFixed(0)}k`;
   return amount;
@@ -53,60 +54,84 @@ const TASKS = [
 ];
 
 export default function Tasks() {
+  // Load visited and claimed tasks from localStorage (or empty objects)
   const [visitedTasks, setVisitedTasks] = useState(() => {
-    return JSON.parse(localStorage.getItem("visitedTasks")) || {};
+    try {
+      return JSON.parse(localStorage.getItem("visitedTasks")) || {};
+    } catch {
+      return {};
+    }
+  });
+  const [claimedTasks, setClaimedTasks] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("claimedTasks")) || {};
+    } catch {
+      return {};
+    }
   });
 
-  const [claimedTasks, setClaimedTasks] = useState({});
   const telegramId = localStorage.getItem("telegramId");
 
+  // Sync claimed tasks from backend user data on mount
   useEffect(() => {
-    const fetchUser = async () => {
+    async function fetchUserClaims() {
       if (!telegramId) return;
+
       try {
         const user = await getUser(telegramId);
-        const claimed = user.claimedTasks || {};
-        setClaimedTasks(claimed);
-        localStorage.setItem("claimedTasks", JSON.stringify(claimed));
+        if (user.claimedTasks) {
+          setClaimedTasks(user.claimedTasks);
+          localStorage.setItem("claimedTasks", JSON.stringify(user.claimedTasks));
+        }
       } catch (err) {
-        console.error("❌ Failed to fetch claimed tasks:", err);
+        console.error("Failed to fetch claimed tasks:", err);
       }
-    };
+    }
 
-    fetchUser();
+    fetchUserClaims();
   }, [telegramId]);
 
+  // Handle visiting a task (open link or copy referral)
   const handleVisit = (taskId, link, isReferral = false) => {
     if (isReferral) {
-      const user = JSON.parse(localStorage.getItem("telegramUser"));
-      const username = user?.username || "yourrefcode";
-      const referralLink = `https://t.me/Nakabozoz_bot/SpinTPE?start=${username}`;
+      // Use telegramId as referral code
+      const referralLink = `https://t.me/Nakabozoz_bot?start=${telegramId || "your_ref_code"}`;
       navigator.clipboard
         .writeText(referralLink)
         .then(() => toast.success("📋 Referral link copied!"))
-        .catch(() => toast.error("❌ Failed to copy link."));
+        .catch(() => toast.error("❌ Failed to copy referral link."));
     } else {
       window.open(link, "_blank");
     }
 
-    const updated = { ...visitedTasks, [taskId]: true };
-    setVisitedTasks(updated);
-    localStorage.setItem("visitedTasks", JSON.stringify(updated));
+    const updatedVisited = { ...visitedTasks, [taskId]: true };
+    setVisitedTasks(updatedVisited);
+    localStorage.setItem("visitedTasks", JSON.stringify(updatedVisited));
   };
 
+  // Handle claiming reward for a task
   const handleClaim = async (task) => {
-    if (!visitedTasks[task.id] || claimedTasks[task.id]) return;
+    if (!visitedTasks[task.id]) {
+      toast.error("Please visit the task before claiming.");
+      return;
+    }
+    if (claimedTasks[task.id]) {
+      toast("Task already claimed.");
+      return;
+    }
 
     const updatedClaims = { ...claimedTasks, [task.id]: true };
     setClaimedTasks(updatedClaims);
     localStorage.setItem("claimedTasks", JSON.stringify(updatedClaims));
 
-    const current = parseInt(localStorage.getItem("tapCoins")) || 0;
-    const newBalance = current + task.reward;
+    // Update local coin balance
+    const currentBalance = parseInt(localStorage.getItem("tapCoins")) || 0;
+    const newBalance = currentBalance + task.reward;
     localStorage.setItem("tapCoins", newBalance);
 
     toast.success(`+${formatReward(task.reward)} 🪙 Claimed!`);
 
+    // Sync with backend
     if (telegramId) {
       try {
         await updateUser(telegramId, {
@@ -114,7 +139,7 @@ export default function Tasks() {
           balance: newBalance,
         });
       } catch (err) {
-        console.error("❌ Failed to sync task to backend:", err);
+        console.error("Failed to sync claimed tasks to backend:", err);
       }
     }
   };
@@ -152,9 +177,7 @@ export default function Tasks() {
               {/* Buttons */}
               <div className="flex gap-3 flex-wrap">
                 <button
-                  onClick={() =>
-                    handleVisit(task.id, task.link, task.isReferral)
-                  }
+                  onClick={() => handleVisit(task.id, task.link, task.isReferral)}
                   disabled={isVisited}
                   className={`px-5 py-2 rounded-full font-semibold text-sm shadow-md transition-transform duration-150 transform active:scale-95 flex items-center gap-2 ${
                     isVisited

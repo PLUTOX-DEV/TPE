@@ -47,7 +47,7 @@ export default function Profile() {
       });
   }, []);
 
-  const referralLink = `https://t.me/Nakabozoz_bot/SpinTPE?start=${user?.username || "your_ref_code"}`;
+  const referralLink = `https://t.me/Nakabozoz_bot?start=${user?.telegramId || "your_ref_code"}`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(referralLink);
@@ -90,7 +90,7 @@ export default function Profile() {
             <FontAwesomeIcon icon={faUser} />
             {user?.fullName || "Guest User"}
           </h2>
-          <p className="text-gray-400 text-sm italic">@{user?.username || "unknown"}</p>
+          <p className="text-gray-400 text-sm italic">ID: {user?.telegramId}</p>
         </div>
 
         <div className="space-y-5 text-base md:text-lg">
@@ -165,7 +165,8 @@ export default function Profile() {
             <ul className="text-gray-300 space-y-1 text-sm">
               {user.referrals.map((r, idx) => (
                 <li key={idx} className="flex items-center gap-2 hover:text-yellow-400 transition">
-                  <span>👤</span> <span>{r.username}</span>
+                  <span>👤</span>
+                  <span>ID: {r.telegramId}</span>
                 </li>
               ))}
             </ul>
