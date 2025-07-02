@@ -34,7 +34,7 @@ export const buyTapBot = async (telegramId) => {
   return await res.json(); // returns updated user object
 };
 
-// ✅ Login or register user with referral
+// ✅ Login or register user with optional referral
 export async function loginUser(userData) {
   try {
     const { telegramId, username, fullName, referrer = "" } = userData;
@@ -87,4 +87,20 @@ export const toggleTapBot = async (telegramId) => {
     throw new Error(errorData.message || "Failed to toggle Tap Bot");
   }
   return await res.json();
+};
+
+// ✅ Claim referral manually via username
+export const claimReferral = async ({ telegramId, referrerUsername }) => {
+  const res = await fetch(`${BASE_URL}/claim-referral`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ telegramId, referrerUsername }),
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(errorData.message || "Failed to claim referral");
+  }
+
+  return await res.json(); // returns updated user
 };

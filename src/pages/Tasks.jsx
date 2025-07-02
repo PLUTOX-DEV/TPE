@@ -4,13 +4,15 @@ import {
   faUserFriends,
   faCheckCircle,
   faCheck,
+  faCopy,
 } from "@fortawesome/free-solid-svg-icons";
 import { faTwitter, faTelegram } from "@fortawesome/free-brands-svg-icons";
 import toast from "react-hot-toast";
 import { getUser, updateUser } from "../api/userApi";
 
-// Format reward amounts with k suffix
+// Format numbers like 500k, 1M
 const formatReward = (amount) => {
+  if (amount >= 1000000) return `${(amount / 1000000).toFixed(1)}M`;
   if (amount >= 1000) return `${(amount / 1000).toFixed(0)}k`;
   return amount;
 };
@@ -54,7 +56,6 @@ const TASKS = [
 ];
 
 export default function Tasks() {
-  // Load visited and claimed tasks from localStorage (or empty objects)
   const [visitedTasks, setVisitedTasks] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem("visitedTasks")) || {};
@@ -62,6 +63,7 @@ export default function Tasks() {
       return {};
     }
   });
+
   const [claimedTasks, setClaimedTasks] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem("claimedTasks")) || {};
@@ -70,32 +72,33 @@ export default function Tasks() {
     }
   });
 
+  const [user, setUser] = useState(null);
   const telegramId = localStorage.getItem("telegramId");
 
-  // Sync claimed tasks from backend user data on mount
   useEffect(() => {
-    async function fetchUserClaims() {
+    async function fetchUser() {
       if (!telegramId) return;
-
       try {
-        const user = await getUser(telegramId);
-        if (user.claimedTasks) {
-          setClaimedTasks(user.claimedTasks);
-          localStorage.setItem("claimedTasks", JSON.stringify(user.claimedTasks));
+        const userData = await getUser(telegramId);
+        setUser(userData);
+
+        if (userData.claimedTasks) {
+          setClaimedTasks(userData.claimedTasks);
+          localStorage.setItem("claimedTasks", JSON.stringify(userData.claimedTasks));
         }
       } catch (err) {
-        console.error("Failed to fetch claimed tasks:", err);
+        console.error("Failed to fetch user:", err);
       }
     }
 
-    fetchUserClaims();
+    fetchUser();
   }, [telegramId]);
 
-  // Handle visiting a task (open link or copy referral)
   const handleVisit = (taskId, link, isReferral = false) => {
     if (isReferral) {
-      // Use telegramId as referral code
-      const referralLink = `https://t.me/Nakabozoz_bot?start=${telegramId || "your_ref_code"}`;
+      const refCode = user?.username || telegramId || "your_code";
+      const referralLink = `https://t.me/Nakabozoz_bot?start=${refCode}`;
+
       navigator.clipboard
         .writeText(referralLink)
         .then(() => toast.success("📋 Referral link copied!"))
@@ -109,10 +112,9 @@ export default function Tasks() {
     localStorage.setItem("visitedTasks", JSON.stringify(updatedVisited));
   };
 
-  // Handle claiming reward for a task
   const handleClaim = async (task) => {
     if (!visitedTasks[task.id]) {
-      toast.error("Please visit the task before claiming.");
+      toast.error("Please visit or complete the task first.");
       return;
     }
     if (claimedTasks[task.id]) {
@@ -124,14 +126,12 @@ export default function Tasks() {
     setClaimedTasks(updatedClaims);
     localStorage.setItem("claimedTasks", JSON.stringify(updatedClaims));
 
-    // Update local coin balance
     const currentBalance = parseInt(localStorage.getItem("tapCoins")) || 0;
     const newBalance = currentBalance + task.reward;
     localStorage.setItem("tapCoins", newBalance);
 
     toast.success(`+${formatReward(task.reward)} 🪙 Claimed!`);
 
-    // Sync with backend
     if (telegramId) {
       try {
         await updateUser(telegramId, {
@@ -190,7 +190,9 @@ export default function Tasks() {
                       <FontAwesomeIcon icon={faCheck} /> Visited
                     </>
                   ) : task.isReferral ? (
-                    "Copy Link"
+                    <>
+                      <FontAwesomeIcon icon={faCopy} /> Copy Link
+                    </>
                   ) : (
                     "Visit"
                   )}
