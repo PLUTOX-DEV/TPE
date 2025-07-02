@@ -1,9 +1,10 @@
-import React, { Suspense, lazy, useEffect } from "react";
+import React, { Suspense, lazy, useEffect, useState } from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
 import BottomNav from "./components/BottomNav";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { loginUser } from "./api/userApi";
+import toast from "react-hot-toast";
 
 // Admin - eagerly loaded
 import AdminUsers from "./pages/AdminUsers";
@@ -31,11 +32,16 @@ const NotFound = () => (
   </div>
 );
 
+// InitTelegramUser Component
 function InitTelegramUser() {
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     const tg = window?.Telegram?.WebApp;
     if (!tg) {
       console.warn("❌ Telegram WebApp not found.");
+      toast.error("Telegram WebApp not found.");
+      setLoading(false);
       return;
     }
 
@@ -44,6 +50,8 @@ function InitTelegramUser() {
 
     if (!tgUser || !tgUser.id) {
       console.warn("❌ Telegram user info missing.");
+      toast.error("Telegram user info missing.");
+      setLoading(false);
       return;
     }
 
@@ -61,11 +69,25 @@ function InitTelegramUser() {
       telegramId,
       username,
       fullName,
-      referrer: startParam,  // pass referral code here
-    }).catch((err) => {
-      console.error("❌ Failed to login or create user:", err);
-    });
+      referrer: startParam, // pass referral code here
+    })
+      .then((user) => {
+        toast.success(`Welcome, ${user.fullName || user.username || "User"}!`);
+      })
+      .catch((err) => {
+        console.error("❌ Failed to login or create user:", err);
+        toast.error("Login failed. Please try again.");
+      })
+      .finally(() => setLoading(false));
   }, []);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen bg-black text-white text-xl">
+        Logging in...
+      </div>
+    );
+  }
 
   return null;
 }
