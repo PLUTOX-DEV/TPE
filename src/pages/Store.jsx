@@ -1,6 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { getUser, updateUser, buyTapBot, toggleTapBot, refillStamina } from "../api/userApi";
+import {
+  getUser,
+  updateUser,
+  buyTapBot,
+  toggleTapBot,
+  refillStamina,
+} from "../api/userApi";
 import toast from "react-hot-toast";
+import Skeleton from "react-loading-skeleton";
+import "react-loading-skeleton/dist/skeleton.css";
 
 const formatNumber = (num) => {
   if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + "M";
@@ -23,11 +31,12 @@ export default function Store() {
     try {
       setLoading(true);
       const u = await getUser(telegramId);
-      setUser(u);
+      setTimeout(() => setUser(u), 400); // slight delay for smoother skeleton transition
     } catch {
       toast.error("❌ Failed to fetch user data");
-    } finally {
       setLoading(false);
+    } finally {
+      setTimeout(() => setLoading(false), 500); // consistent loading
     }
   };
 
@@ -47,8 +56,6 @@ export default function Store() {
       setLoadingMultiplier(true);
       await updateAndRefresh({ multiplier: user.multiplier + 1, balance: user.balance - 50 });
       toast.success("🔥 Tap Multiplier upgraded!");
-    } catch (err) {
-      toast.error(err.message || "Failed to upgrade multiplier.");
     } finally {
       setLoadingMultiplier(false);
     }
@@ -64,8 +71,6 @@ export default function Store() {
         balance: user.balance - 80,
       });
       toast.success("⚡ Regen Speed improved!");
-    } catch (err) {
-      toast.error(err.message || "Failed to improve regen speed.");
     } finally {
       setLoadingRegen(false);
     }
@@ -79,8 +84,6 @@ export default function Store() {
       await buyTapBot(telegramId);
       toast.success("🤖 Tap Bot purchased!");
       fetchUser();
-    } catch (err) {
-      toast.error(err.message || "Failed to purchase Tap Bot.");
     } finally {
       setLoadingTapBot(false);
     }
@@ -93,7 +96,7 @@ export default function Store() {
       toast.success(response.message);
       fetchUser();
     } catch (err) {
-      toast.error(err.message || "Refill failed.");
+      toast.error(err?.response?.data?.message || "Refill failed.");
     } finally {
       setLoadingRefill(false);
     }
@@ -106,15 +109,36 @@ export default function Store() {
       toast.success(response.message);
       fetchUser();
     } catch (err) {
-      toast.error(err.message || "Toggle failed.");
+      toast.error(err?.response?.data?.message || "Toggle failed.");
     } finally {
       setLoadingToggle(false);
     }
   };
 
-  if (loading || !user) {
-    return <div className="text-white text-center mt-10">Loading store...</div>;
-  }
+  const renderSkeleton = () => (
+    <div className="min-h-screen bg-black text-white flex flex-col items-center px-4 py-10">
+      <h1 className="text-3xl font-bold text-yellow-400 mb-6">🛍 Tapper Store</h1>
+      <p className="mb-6 text-lg">
+        🪙 Coins: <Skeleton width={80} baseColor="#333" highlightColor="#444" />
+      </p>
+      <div className="space-y-6 w-full max-w-sm">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="bg-white/10 p-4 rounded-xl border border-yellow-500/20">
+            <Skeleton height={24} width="60%" baseColor="#333" />
+            <Skeleton height={16} width="40%" style={{ marginTop: 10 }} baseColor="#333" />
+            <Skeleton height={40} width="100%" style={{ marginTop: 20 }} baseColor="#444" />
+          </div>
+        ))}
+        <div className="bg-white/10 p-4 rounded-xl border border-yellow-500/20">
+          <Skeleton height={24} width="50%" baseColor="#333" />
+          <Skeleton height={16} width="30%" style={{ marginTop: 10 }} baseColor="#333" />
+          <Skeleton height={40} width="100%" style={{ marginTop: 20 }} baseColor="#444" />
+        </div>
+      </div>
+    </div>
+  );
+
+  if (loading || !user) return renderSkeleton();
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center px-4 py-10">
@@ -146,12 +170,12 @@ export default function Store() {
 
         <UpgradeCard
           title="💧 Refill Stamina"
-          subtitle={`Used Today: ${user.staminaRefillsToday || 0} / 4`}
+          subtitle={`Used Today: ${user.tapBotToggleHistory?.count || 0} / 4`}
           onClick={handleRefillStamina}
-          cost={20}
+          cost={30}
           loading={loadingRefill}
-          disabled={(user.staminaRefillsToday || 0) >= 4 || user.balance < 20}
-          note={(user.staminaRefillsToday || 0) >= 4 ? "Daily limit reached" : null}
+          disabled={(user.tapBotToggleHistory?.count || 0) >= 4 || user.balance < 30}
+          note={(user.tapBotToggleHistory?.count || 0) >= 4 ? "Daily limit reached" : null}
         />
 
         <div className="bg-white/10 p-4 rounded-xl border border-yellow-500/20">
