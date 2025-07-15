@@ -1,4 +1,4 @@
-const BASE_URL = 'https://nakabozoz.onrender.com/api/users';
+const BASE_URL = 'https://nakabozoz-bn.onrender.com/api/users';
 
 // ✅ Get user by Telegram ID
 export const getUser = async (telegramId) => {
