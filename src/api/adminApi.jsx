@@ -1,4 +1,4 @@
-const BASE_URL = "https://nakabozoz.onrender.com/api/admin";
+const BASE_URL = "https://nakabozoz-bn.onrender.com/api/admin";
 const ADMIN_KEY = "my_super_secret_key"; // Same key as in backend
 
 const getHeaders = () => ({
